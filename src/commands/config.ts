@@ -1,6 +1,8 @@
 import { UIComponents, Prompts } from '../ui/index.js';
 import { ConfigurationManager, ApiKeyManager, GitignoreManager } from '../core/index.js';
+import { ConfigurationRecovery } from '../core/configuration-recovery.js';
 import { ErrorHandler } from '../core/error-handler.js';
+import chalk from 'chalk';
 
 /**
  * Manage BaseGuard configuration
@@ -11,6 +13,8 @@ export async function config(action: string, options?: {
   preset?: string;
   file?: string;
   format?: string;
+  backup?: boolean;
+  interactive?: boolean;
 }): Promise<void> {
   try {
     switch (action) {
@@ -43,6 +47,9 @@ export async function config(action: string, options?: {
         break;
       case 'restore':
         await restoreConfiguration(options?.file);
+        break;
+      case 'recover':
+        await recoverConfiguration(options);
         break;
       default:
         UIComponents.showErrorBox(`Unknown config action: ${action}`);
@@ -339,6 +346,89 @@ async function restoreConfiguration(backupFile?: string): Promise<void> {
   }
 }
 
+async function recoverConfiguration(options?: { backup?: boolean; interactive?: boolean }): Promise<void> {
+  try {
+    console.log(chalk.cyan('🔧 BaseGuard Configuration Recovery\n'));
+    
+    if (options?.interactive) {
+      // Run interactive recovery wizard
+      await ConfigurationRecovery.runRecoveryWizard();
+      return;
+    }
+    
+    // Automatic recovery
+    console.log(chalk.cyan('Attempting automatic configuration recovery...'));
+    
+    const recoveryResult = await ConfigurationRecovery.recoverConfiguration({
+      createBackup: options?.backup ?? true,
+      validateConfig: true,
+      migrateVersion: true,
+      repairCorruption: true,
+      useDefaults: true
+    });
+    
+    if (recoveryResult.success) {
+      UIComponents.showSuccessBox('Configuration recovered successfully');
+      
+      if (recoveryResult.backupCreated) {
+        console.log(chalk.dim(`Backup created: ${recoveryResult.backupCreated}`));
+      }
+      
+      if (recoveryResult.warnings.length > 0) {
+        console.log(chalk.yellow('\n⚠️ Recovery warnings:'));
+        recoveryResult.warnings.forEach(warning => {
+          console.log(chalk.yellow(`   • ${warning}`));
+        });
+      }
+      
+      // Show recovered configuration
+      console.log(chalk.cyan('\n📋 Recovered Configuration:'));
+      if (recoveryResult.config) {
+        console.log(`   Version: ${recoveryResult.config.version}`);
+        console.log(`   Targets: ${recoveryResult.config.targets.length} browser(s)`);
+        console.log(`   API Keys: Jules ${recoveryResult.config.apiKeys.jules ? '✓' : '✗'}, Gemini ${recoveryResult.config.apiKeys.gemini ? '✓' : '✗'}`);
+        console.log(`   Automation: ${recoveryResult.config.automation.enabled ? 'Enabled' : 'Disabled'}`);
+      }
+      
+    } else {
+      UIComponents.showErrorBox('Configuration recovery failed');
+      
+      console.log(chalk.red('\n❌ Recovery errors:'));
+      recoveryResult.errors.forEach(error => {
+        console.log(chalk.red(`   • ${error}`));
+      });
+      
+      console.log(chalk.cyan('\n💡 Manual recovery options:'));
+      console.log(chalk.cyan('   • Run "base config recover --interactive" for guided recovery'));
+      console.log(chalk.cyan('   • Run "base init" to create a fresh configuration'));
+      console.log(chalk.cyan('   • Manually edit .baseguardrc.json file'));
+      console.log(chalk.cyan('   • Restore from backup if available'));
+      
+      // Show available backups
+      const backups = await ConfigurationRecovery.listBackups();
+      if (backups.length > 0) {
+        console.log(chalk.cyan('\n📦 Available backups:'));
+        backups.slice(0, 3).forEach(backup => {
+          console.log(chalk.cyan(`   • ${backup.timestamp.toLocaleString()} (${backup.source})`));
+        });
+        console.log(chalk.cyan('\n   Use "base config restore --file <backup-file>" to restore'));
+      }
+      
+      process.exit(1);
+    }
+    
+  } catch (error) {
+    UIComponents.showErrorBox(`Recovery process failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    
+    console.log(chalk.cyan('\n🆘 Emergency recovery options:'));
+    console.log(chalk.cyan('   • Delete .baseguardrc.json and run "base init"'));
+    console.log(chalk.cyan('   • Check file permissions in your project directory'));
+    console.log(chalk.cyan('   • Run "base diagnostics" for comprehensive troubleshooting'));
+    
+    process.exit(1);
+  }
+}
+
 function showConfigHelp(): void {
   UIComponents.showSectionHeader('Configuration Commands');
   UIComponents.showList([
@@ -356,6 +446,8 @@ function showConfigHelp(): void {
     'base config security - Check configuration security',
     'base config backup - Create configuration backup',
     'base config restore --file <backup> - Restore from backup',
+    'base config recover - Attempt automatic configuration recovery',
+    'base config recover --interactive - Run interactive recovery wizard',
     '',
     'Shorthand commands:',
     'base add "chrome 100" - Add browser target',

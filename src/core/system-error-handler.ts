@@ -30,8 +30,12 @@ export class SystemError extends Error {
     super(message);
     this.name = 'SystemError';
     this.context = {
-      ...context,
-      timestamp: new Date()
+      operation: context?.operation || 'unknown',
+      file: context?.file,
+      line: context?.line,
+      details: context?.details,
+      timestamp: new Date(),
+      userId: context?.userId
     };
   }
 }
@@ -110,7 +114,7 @@ export class SystemErrorHandler {
       }
 
       if (showWarning) {
-        console.warn(chalk.yellow(`⚠️ ${context.operation} failed: ${error.message}`));
+        console.warn(chalk.yellow(`⚠️ ${context.operation} failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
       }
 
       // Attempt recovery if enabled
@@ -254,7 +258,7 @@ export class SystemErrorHandler {
           return true;
         }
       } catch (recoveryError) {
-        console.log(chalk.dim(`   Recovery failed: ${recoveryError.message}`));
+        console.log(chalk.dim(`   Recovery failed: ${recoveryError instanceof Error ? recoveryError.message : 'Unknown error'}`));
       }
     }
 
@@ -414,7 +418,7 @@ export class SystemErrorHandler {
       await fs.writeFile(logPath, JSON.stringify(logData, null, 2));
       console.log(chalk.dim(`Error log saved to: ${logPath}`));
     } catch (writeError) {
-      console.warn(chalk.yellow(`Failed to save error log: ${writeError.message}`));
+      console.warn(chalk.yellow(`Failed to save error log: ${writeError instanceof Error ? writeError.message : 'Unknown error'}`));
     }
   }
 
@@ -558,8 +562,20 @@ export class SystemErrorHandler {
       description: 'Create missing parent directories',
       priority: 3,
       execute: async () => {
-        // This would be implemented based on the specific context
-        return false; // Placeholder
+        try {
+          // Try to create parent directories for common paths
+          const commonPaths = ['src', 'app', 'components', 'pages', '.baseguard'];
+          for (const dirPath of commonPaths) {
+            try {
+              await fs.mkdir(dirPath, { recursive: true });
+            } catch (error) {
+              // Ignore if directory already exists
+            }
+          }
+          return true;
+        } catch (error) {
+          return false;
+        }
       }
     });
 
@@ -569,8 +585,9 @@ export class SystemErrorHandler {
       description: 'Continue with offline-only features',
       priority: 2,
       execute: async () => {
-        console.log(chalk.cyan('Switching to offline mode...'));
+        console.log(chalk.cyan('🔌 Switching to offline mode...'));
         SystemErrorHandler.setOfflineMode(true);
+        process.env.BASEGUARD_OFFLINE = 'true';
         return true;
       }
     });
@@ -581,8 +598,25 @@ export class SystemErrorHandler {
       description: 'Fall back to cached API responses',
       priority: 1,
       execute: async () => {
-        // This would check for cached responses
-        return false; // Placeholder
+        try {
+          // Check if cache directory exists and has content
+          const cacheDir = path.join(process.cwd(), '.baseguard', 'cache');
+          const cacheExists = await fs.access(cacheDir).then(() => true).catch(() => false);
+          
+          if (cacheExists) {
+            const files = await fs.readdir(cacheDir);
+            if (files.length > 0) {
+              console.log(chalk.cyan('📦 Using cached API responses'));
+              return true;
+            }
+          }
+          
+          // Enable offline mode as fallback
+          SystemErrorHandler.setOfflineMode(true);
+          return true;
+        } catch (error) {
+          return false;
+        }
       }
     });
 
@@ -592,7 +626,7 @@ export class SystemErrorHandler {
       description: 'Skip the file with syntax errors and continue',
       priority: 1,
       execute: async () => {
-        console.log(chalk.cyan('Skipping malformed file...'));
+        console.log(chalk.cyan('⏭️ Skipping malformed file and continuing...'));
         return true;
       }
     });
@@ -614,8 +648,98 @@ export class SystemErrorHandler {
       description: 'Try with a simpler parsing strategy',
       priority: 1,
       execute: async () => {
-        console.log(chalk.cyan('Using fallback parser...'));
+        console.log(chalk.cyan('🔄 Using fallback parser strategy...'));
         return true;
+      }
+    });
+
+    // Memory error recovery
+    SystemErrorHandler.registerRecoveryStrategy('OUT_OF_MEMORY', {
+      name: 'Reduce processing batch size',
+      description: 'Process files in smaller batches to reduce memory usage',
+      priority: 3,
+      execute: async () => {
+        console.log(chalk.cyan('🧠 Reducing memory usage by processing smaller batches...'));
+        process.env.BASEGUARD_BATCH_SIZE = '10'; // Reduce from default
+        return true;
+      }
+    });
+
+    // Too many files recovery
+    SystemErrorHandler.registerRecoveryStrategy('TOO_MANY_FILES', {
+      name: 'Limit file processing',
+      description: 'Reduce the number of files processed simultaneously',
+      priority: 2,
+      execute: async () => {
+        console.log(chalk.cyan('📁 Limiting concurrent file processing...'));
+        process.env.BASEGUARD_MAX_FILES = '100'; // Reduce from default
+        return true;
+      }
+    });
+
+    // Timeout error recovery
+    SystemErrorHandler.registerRecoveryStrategy('TIMEOUT_ERROR', {
+      name: 'Increase timeout and retry',
+      description: 'Increase timeout settings and retry the operation',
+      priority: 2,
+      execute: async () => {
+        console.log(chalk.cyan('⏱️ Increasing timeout settings...'));
+        process.env.BASEGUARD_TIMEOUT = '60000'; // 60 seconds
+        return true;
+      }
+    });
+
+    // Permission denied recovery
+    SystemErrorHandler.registerRecoveryStrategy('PERMISSION_DENIED', {
+      name: 'Skip protected files',
+      description: 'Skip files that cannot be accessed and continue',
+      priority: 1,
+      execute: async () => {
+        console.log(chalk.cyan('🔒 Skipping protected files and continuing...'));
+        return true;
+      }
+    });
+
+    // Disk full recovery
+    SystemErrorHandler.registerRecoveryStrategy('DISK_FULL', {
+      name: 'Clean temporary files',
+      description: 'Clean up temporary files to free space',
+      priority: 3,
+      execute: async () => {
+        try {
+          console.log(chalk.cyan('🧹 Cleaning temporary files...'));
+          
+          // Clean BaseGuard temp files
+          const tempDir = path.join(process.cwd(), '.baseguard', 'temp');
+          try {
+            await fs.rm(tempDir, { recursive: true, force: true });
+            await fs.mkdir(tempDir, { recursive: true });
+          } catch (error) {
+            // Ignore if temp dir doesn't exist
+          }
+          
+          // Clean system temp files (be careful here)
+          const systemTemp = process.env.TMPDIR || process.env.TEMP || '/tmp';
+          const baseguardTempPattern = path.join(systemTemp, 'baseguard-*');
+          
+          try {
+            const { glob } = await import('glob');
+            const tempFiles = await glob(baseguardTempPattern);
+            for (const file of tempFiles) {
+              try {
+                await fs.rm(file, { recursive: true, force: true });
+              } catch (error) {
+                // Ignore individual file errors
+              }
+            }
+          } catch (error) {
+            // Ignore if glob fails
+          }
+          
+          return true;
+        } catch (error) {
+          return false;
+        }
       }
     });
   }

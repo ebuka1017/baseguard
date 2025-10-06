@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { init, check, fix, config, automation } from '../dist/commands/index.js';
+import { init, check, fix, config, automation, status, diagnostics } from '../dist/commands/index.js';
 import { showTerminalHeader, showVersionInfo, showGlobalHelp } from '../dist/ui/index.js';
 import { StartupOptimizer } from '../dist/core/startup-optimizer.js';
 
@@ -84,6 +84,8 @@ program
   .option('--strict', 'Exit with error code if violations are found (useful for CI/CD)')
   .option('--files <pattern>', 'File pattern to check using glob syntax', '**/*.{js,jsx,ts,tsx,vue,svelte,css,html}')
   .option('--format <format>', 'Output format for results', 'table')
+  .option('--debug', 'Enable debug logging for troubleshooting')
+  .option('--offline', 'Run in offline mode (no network requests)')
   .addHelpText('after', `
 ${chalk.cyan('Output Formats:')}
   ${chalk.white('table')}    Human-readable table format (default)
@@ -280,6 +282,39 @@ ${chalk.cyan('Automation Settings:')}
 `)
   .action(() => config('automation'));
 
+configCmd
+  .command('recover')
+  .description('Attempt automatic recovery of corrupted configuration')
+  .option('--backup', 'Create backup before recovery')
+  .option('--interactive', 'Run interactive recovery wizard')
+  .addHelpText('after', `
+${chalk.cyan('Recovery Features:')}
+  • Automatic detection of configuration issues
+  • Repair of corrupted JSON syntax
+  • Migration from older configuration versions
+  • Validation and structure repair
+  • Backup creation before changes
+
+${chalk.cyan('Recovery Process:')}
+  1. Validates current configuration
+  2. Creates backup if requested
+  3. Attempts automatic repair
+  4. Migrates to current version
+  5. Validates final result
+
+${chalk.cyan('Examples:')}
+  ${chalk.dim('
+</content>
+</file>)} base config recover                ${chalk.gray('# Automatic recovery')}
+  ${chalk.dim('
+</content>
+</file>)} base config recover --backup       ${chalk.gray('# Create backup first')}
+  ${chalk.dim('
+</content>
+</file>)} base config recover --interactive  ${chalk.gray('# Interactive wizard')}
+`)
+  .action((options) => config('recover', options));
+
 // Automation and git hooks
 const autoCmd = program
   .command('automation')
@@ -420,6 +455,85 @@ ${chalk.cyan('Examples:')}
   ${chalk.dim('$')} base list --format json ${chalk.gray('# Export as JSON')}
 `)
   .action((options) => config('list', options));
+
+// System status and health
+program
+  .command('status')
+  .description('Show BaseGuard system status and health information')
+  .option('--verbose', 'Show detailed status information')
+  .option('--services', 'Check external service availability')
+  .option('--config', 'Show configuration status and validation')
+  .option('--errors', 'Show error summary and recent issues')
+  .addHelpText('after', `
+${chalk.cyan('Status Information:')}
+  • Overall system health (healthy/degraded/critical)
+  • Component status (configuration, services, errors)
+  • Current degradation mode and limitations
+  • Service availability (network, APIs)
+  • Configuration validation results
+  • Error summary and recent issues
+  • Performance information
+  • Recovery recommendations
+
+${chalk.cyan('Examples:')}
+  ${chalk.dim('
+</content>
+</file>)} base status                    ${chalk.gray('# Show basic system status')}
+  ${chalk.dim('
+</content>
+</file>)} base status --verbose          ${chalk.gray('# Show detailed information')}
+  ${chalk.dim('
+</content>
+</file>)} base status --services         ${chalk.gray('# Check service availability')}
+  ${chalk.dim('
+</content>
+</file>)} base status --config           ${chalk.gray('# Show configuration status')}
+  ${chalk.dim('
+</content>
+</file>)} base status --errors           ${chalk.gray('# Show error information')}
+
+${chalk.cyan('Health Levels:')}
+  ${chalk.green('✅ Healthy')}    All systems operational
+  ${chalk.yellow('⚠️ Degraded')}   Some features limited
+  ${chalk.red('❌ Critical')}   Major issues detected
+`)
+  .action(async (options) => {
+    await startupPromise;
+    return status(options);
+  });
+
+// System diagnostics
+program
+  .command('diagnostics')
+  .alias('diag')
+  .description('Run comprehensive system diagnostics and recovery')
+  .addHelpText('after', `
+${chalk.cyan('Diagnostic Features:')}
+  • Generate detailed debug report
+  • Run configuration recovery wizard
+  • Check service availability
+  • Show error log summary
+  • Clean up old files and caches
+  • Provide recovery recommendations
+
+${chalk.cyan('What this does:')}
+  1. Creates comprehensive debug report
+  2. Attempts automatic configuration recovery
+  3. Checks all external services
+  4. Analyzes error logs for patterns
+  5. Cleans up temporary files
+  6. Provides actionable recommendations
+
+${chalk.cyan('Use when:')}
+  • BaseGuard is not working correctly
+  • You're experiencing frequent errors
+  • Need to troubleshoot issues
+  • Want to optimize performance
+`)
+  .action(async () => {
+    await startupPromise;
+    return diagnostics();
+  });
 
 // Add version command with detailed info
 program
