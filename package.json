@@ -4,7 +4,7 @@
   "description": "BaseGuard - Never ship incompatible code again. Intelligent browser compatibility enforcement with AI-powered analysis and autonomous fixing.",
   "main": "dist/index.js",
   "bin": {
-    "base": "./bin/base.js"
+    "base": "bin/base.js"
   },
   "type": "module",
   "scripts": {
@@ -64,5 +64,17 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ebuka1017/baseguard.git"
+  },
+  "types": "./dist/index.d.ts",
+  "bugs": {
+    "url": "https://github.com/ebuka1017/baseguard/issues"
+  },
+  "homepage": "https://github.com/ebuka1017/baseguard#readme"
 }
