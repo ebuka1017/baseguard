@@ -1,5 +1,5 @@
 {
-  "name": "baseguard",
+  "name": "@isaac2701/baseguard",
   "version": "1.0.0",
   "description": "BaseGuard - Never ship incompatible code again. Intelligent browser compatibility enforcement with AI-powered analysis and autonomous fixing.",
   "main": "dist/index.js",
