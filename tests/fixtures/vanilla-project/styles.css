@@ -1,0 +1,359 @@
+/* Modern CSS features for comprehensive testing */
+
+/* CSS Custom Properties with modern color functions */
+:root {
+  --primary-color: oklch(0.7 0.2 240);
+  --secondary-color: color(display-p3 0.2 0.8 0.4);
+  --accent-color: color-mix(in srgb, blue 60%, red);
+  --gradient-bg: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+/* Modern CSS reset and base styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  color-scheme: light dark;
+  accent-color: var(--primary-color);
+}
+
+/* Container queries - baseline newly available */
+.vanilla-app {
+  container-type: inline-size;
+  container-name: main-container;
+  
+  /* Modern CSS properties */
+  aspect-ratio: 16/9;
+  min-height: 100vh;
+  padding: 2rem;
+  
+  /* Modern CSS functions and values */
+  background: color-mix(in srgb, lightblue 30%, white);
+  backdrop-filter: blur(10px);
+  
+  /* CSS Grid with modern features */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: clamp(1rem, 3vw, 2rem);
+  
+  /* Logical properties */
+  padding-inline: max(2rem, 5vw);
+  margin-block: 1rem;
+}
+
+/* Container query rules */
+@container main-container (min-width: 768px) {
+  .vanilla-app {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .container-test {
+    grid-column: span 2;
+  }
+}
+
+@container main-container (min-width: 1200px) {
+  .vanilla-app {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .grid-container {
+    grid-column: span 3;
+  }
+}
+
+/* Modern CSS selectors */
+.vanilla-app:has(dialog[open]) {
+  background-color: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(15px) brightness(0.8);
+}
+
+.vanilla-app:has(.details-section[open]) {
+  border-left: 4px solid var(--accent-color);
+}
+
+/* CSS Nesting */
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  
+  button {
+    background: var(--gradient-bg);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+    
+    &:active {
+      transform: translateY(0) scale(0.98);
+    }
+  }
+}
+
+/* Modern pseudo-classes */
+.vanilla-app *:is(h1, h2, h3) {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.vanilla-app *:where(p, li) {
+  color: #333;
+}
+
+/* Container for container query testing */
+.container-test {
+  container-type: inline-size;
+  container-name: test-container;
+  background: linear-gradient(45deg, var(--primary-color), transparent);
+  padding: 2rem;
+  border-radius: 12px;
+  
+  /* Modern CSS units and functions */
+  width: min(100%, 600px);
+  height: max(200px, 20vh);
+  
+  .nested-container {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+  }
+}
+
+@container test-container (min-width: 400px) {
+  .container-test {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    
+    h3 {
+      grid-column: span 2;
+      text-align: center;
+    }
+  }
+}
+
+/* CSS Grid with modern features */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--secondary-color) 20%, white);
+  border-radius: 8px;
+}
+
+.grid-item {
+  background: var(--gradient-bg);
+  color: white;
+  padding: 2rem 1rem;
+  text-align: center;
+  border-radius: 6px;
+  
+  /* Modern CSS transforms and animations */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  
+  &:hover {
+    transform: rotate(2deg) scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Dialog styling with modern CSS */
+dialog {
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  
+  &::backdrop {
+    background: color-mix(in srgb, black 60%, transparent);
+    backdrop-filter: blur(5px);
+  }
+}
+
+.dialog-content {
+  padding: 2rem;
+  background: linear-gradient(135deg, white, #f8f9fa);
+  border-radius: 16px;
+  min-width: 300px;
+  
+  h2 {
+    margin-top: 0;
+    color: var(--primary-color);
+  }
+  
+  form {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    
+    button {
+      padding: 0.5rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      cursor: pointer;
+      
+      &[value="confirm"] {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+      
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+  }
+}
+
+/* Details/Summary styling */
+.details-section {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  padding: 1rem;
+  
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--primary-color);
+    padding: 0.5rem;
+    border-radius: 4px;
+    
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+  
+  &[open] summary {
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+  }
+}
+
+/* Canvas styling */
+canvas {
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
+  background: white;
+  width: 100%;
+  height: auto;
+  
+  &:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* Modern input styling */
+.modern-inputs {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1.5rem;
+  border-radius: 8px;
+  
+  input {
+    display: block;
+    width: 100%;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 1px;
+    }
+  }
+}
+
+/* Loading test styling */
+.loading-test {
+  text-align: center;
+  
+  img {
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* CSS @supports for progressive enhancement */
+@supports (container-type: inline-size) {
+  .vanilla-app {
+    border: 3px solid var(--accent-color);
+  }
+}
+
+@supports (backdrop-filter: blur(10px)) {
+  .vanilla-app {
+    background: rgba(255, 255, 255, 0.8);
+  }
+}
+
+@supports (color-mix(in srgb, red, blue)) {
+  .grid-item {
+    background: color-mix(in srgb, var(--primary-color) 80%, white);
+  }
+}
+
+/* Modern CSS animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vanilla-app > * {
+  animation: fadeInUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+.vanilla-app > *:nth-child(1) { animation-delay: 0.1s; }
+.vanilla-app > *:nth-child(2) { animation-delay: 0.2s; }
+.vanilla-app > *:nth-child(3) { animation-delay: 0.3s; }
+.vanilla-app > *:nth-child(4) { animation-delay: 0.4s; }
+
+/* CSS scroll-behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Modern CSS for print */
+@media print {
+  .vanilla-app {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .button-group,
+  canvas {
+    display: none;
+  }
+}

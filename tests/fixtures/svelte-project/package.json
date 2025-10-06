@@ -1,0 +1,11 @@
+{
+  "name": "svelte-test-project",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "svelte": "^4.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

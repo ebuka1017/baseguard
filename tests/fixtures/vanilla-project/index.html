@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanilla Test Project</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="vanilla-app">
+        <h1>Vanilla JavaScript Test App</h1>
+        
+        <div class="button-group">
+            <button id="openDialog">Open Dialog</button>
+            <button id="testAPIs">Test Web APIs</button>
+            <button id="testCanvas">Test Canvas</button>
+            <button id="testWebGL">Test WebGL</button>
+            <button id="testServiceWorker">Test Service Worker</button>
+        </div>
+        
+        <!-- Modern HTML elements -->
+        <dialog id="testDialog">
+            <div class="dialog-content">
+                <h2>Native HTML Dialog</h2>
+                <p>This is a native HTML dialog element with modern styling.</p>
+                <form method="dialog">
+                    <button value="cancel">Cancel</button>
+                    <button value="confirm">Confirm</button>
+                </form>
+            </div>
+        </dialog>
+
+        <details class="details-section">
+            <summary>Modern HTML Details/Summary</summary>
+            <p>This content is revealed when the summary is clicked. The details/summary elements are part of modern HTML.</p>
+            <ul>
+                <li>Baseline widely available</li>
+                <li>Native browser implementation</li>
+                <li>Accessible by default</li>
+            </ul>
+        </details>
+
+        <div class="container-test">
+            <h3>Container Query Test</h3>
+            <p>This container changes layout based on its own size.</p>
+            <div class="nested-container">
+                <p>Nested content that responds to container queries.</p>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="grid-item">Grid Item 1</div>
+            <div class="grid-item">Grid Item 2</div>
+            <div class="grid-item">Grid Item 3</div>
+            <div class="grid-item">Grid Item 4</div>
+        </div>
+
+        <canvas id="testCanvas" width="400" height="300"></canvas>
+        
+        <div class="modern-inputs">
+            <h3>Modern Input Types</h3>
+            <input type="date" id="dateInput" />
+            <input type="color" id="colorInput" value="#ff0000" />
+            <input type="range" id="rangeInput" min="0" max="100" value="50" />
+            <input type="search" id="searchInput" placeholder="Search..." />
+        </div>
+
+        <div class="loading-test">
+            <h3>Lazy Loading Test</h3>
+            <img src="https://picsum.photos/400/300" alt="Test image" loading="lazy" />
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
