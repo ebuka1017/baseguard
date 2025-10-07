@@ -1,6 +1,9 @@
 import { Parser } from './parser.js';
 import type { DetectedFeature } from '../types/index.js';
 import { LazyLoader } from '../core/lazy-loader.js';
+import traverse from '@babel/traverse';
+import * as t from '@babel/types';
+import postcss from 'postcss';
 
 /**
  * Vue single-file component parser - extracts ALL web platform features

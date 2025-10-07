@@ -1,6 +1,10 @@
 import { Parser } from './parser.js';
 import type { DetectedFeature } from '../types/index.js';
 import { LazyLoader } from '../core/lazy-loader.js';
+import { parse as parseBabel } from '@babel/parser';
+import traverse from '@babel/traverse';
+import * as t from '@babel/types';
+import postcss from 'postcss';
 
 /**
  * Parser for Svelte files (.svelte) - extracts ALL web platform features
@@ -177,7 +181,7 @@ export class SvelteParser extends Parser {
 
       traverse(ast, {
         // Extract JavaScript Web APIs
-        MemberExpression: (path) => {
+        MemberExpression: (path: any) => {
           const feature = this.extractWebAPIFeature(path.node, scriptContent, scriptNode.start);
           if (feature) {
             features.push({ ...feature, file: filePath });
@@ -185,7 +189,7 @@ export class SvelteParser extends Parser {
         },
 
         // Extract function calls to Web APIs
-        CallExpression: (path) => {
+        CallExpression: (path: any) => {
           const feature = this.extractWebAPICall(path.node, scriptContent, scriptNode.start);
           if (feature) {
             features.push({ ...feature, file: filePath });
@@ -193,7 +197,7 @@ export class SvelteParser extends Parser {
         },
 
         // Extract modern JavaScript syntax features
-        OptionalMemberExpression: (path) => {
+        OptionalMemberExpression: (path: any) => {
           features.push({
             feature: 'optional-chaining',
             type: 'js',
@@ -205,7 +209,7 @@ export class SvelteParser extends Parser {
         },
 
         // Nullish coalescing
-        LogicalExpression: (path) => {
+        LogicalExpression: (path: any) => {
           if (path.node.operator === '??') {
             features.push({
               feature: 'nullish-coalescing',
@@ -219,7 +223,7 @@ export class SvelteParser extends Parser {
         },
 
         // Private class fields
-        ClassPrivateProperty: (path) => {
+        ClassPrivateProperty: (path: any) => {
           features.push({
             feature: 'private-fields',
             type: 'js',
@@ -231,7 +235,7 @@ export class SvelteParser extends Parser {
         },
 
         // Top-level await
-        AwaitExpression: (path) => {
+        AwaitExpression: (path: any) => {
           if (this.isTopLevelAwait(path)) {
             features.push({
               feature: 'top-level-await',
@@ -265,7 +269,7 @@ export class SvelteParser extends Parser {
       
       const root = postcss.parse(styleContent);
       
-      root.walkDecls(decl => {
+      root.walkDecls((decl: any) => {
         features.push({
           feature: decl.prop,
           type: 'css',
@@ -276,7 +280,7 @@ export class SvelteParser extends Parser {
         });
       });
 
-      root.walkRules(rule => {
+      root.walkRules((rule: any) => {
         // Extract CSS selectors that might be modern features
         if (rule.selector.includes(':has(') || 
             rule.selector.includes(':is(') || 
@@ -293,7 +297,7 @@ export class SvelteParser extends Parser {
         }
       });
 
-      root.walkAtRules(atRule => {
+      root.walkAtRules((atRule: any) => {
         // Extract at-rules like @supports, @container, etc.
         features.push({
           feature: `@${atRule.name}`,

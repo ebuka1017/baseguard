@@ -593,33 +593,13 @@ ${chalk.cyan('Examples:')}
     }
   });
 
-// Global error handling with helpful messages
-program.exitOverride((err) => {
-  if (err.code === 'commander.help') {
-    process.exit(0);
-  }
-  if (err.code === 'commander.version') {
-    process.exit(0);
-  }
-  if (err.code === 'commander.unknownCommand') {
-    console.error(chalk.red('❌ Unknown command:'), chalk.white(err.message.split("'")[1]));
-    console.log(chalk.yellow('\n💡 Suggestions:'));
-    console.log(`  • Run ${chalk.white('base help')} to see all available commands`);
-    console.log(`  • Run ${chalk.white('base init')} if you haven't set up BaseGuard yet`);
-    console.log(`  • Check for typos in the command name`);
-    process.exit(1);
-  }
-  if (err.code === 'commander.missingArgument') {
-    console.error(chalk.red('❌ Missing argument:'), err.message);
-    console.log(chalk.yellow('\n💡 Help:'));
-    console.log(`  Run ${chalk.white(`base help ${process.argv[2] || ''}`)} for usage information`);
-    process.exit(1);
-  }
-  console.error(chalk.red('❌ Error:'), err.message);
-  console.log(chalk.yellow('\n💡 Need help?'));
-  console.log(`  • Run ${chalk.white('base help')} for available commands`);
-  console.log(`  • Check ${chalk.blue('https://github.com/baseguard/baseguard#readme')} for documentation`);
-  console.log(`  • Report issues at ${chalk.blue('https://github.com/baseguard/baseguard/issues')}`);
+// Handle unknown commands
+program.on('command:*', function (operands) {
+  console.error(chalk.red('❌ Unknown command:'), chalk.white(operands[0]));
+  console.log(chalk.yellow('\n💡 Suggestions:'));
+  console.log(`  • Run ${chalk.white('base help')} to see all available commands`);
+  console.log(`  • Run ${chalk.white('base init')} if you haven't set up BaseGuard yet`);
+  console.log(`  • Check for typos in the command name`);
   process.exit(1);
 });
 

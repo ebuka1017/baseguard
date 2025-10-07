@@ -1,6 +1,10 @@
 import { Parser } from './parser.js';
 import type { DetectedFeature } from '../types/index.js';
 import { LazyLoader } from '../core/lazy-loader.js';
+import { parse as parseBabel } from '@babel/parser';
+import traverse from '@babel/traverse';
+import * as t from '@babel/types';
+import postcss from 'postcss';
 
 /**
  * Vanilla JavaScript/CSS/HTML parser - extracts ALL web platform features
@@ -280,7 +284,7 @@ export class VanillaParser extends Parser {
 
       traverse(ast, {
         // Extract Web API member expressions
-        MemberExpression: (path) => {
+        MemberExpression: (path: any) => {
           const feature = this.extractWebAPIFeature(path.node, content);
           if (feature) {
             features.push({ ...feature, file: filePath });
@@ -288,7 +292,7 @@ export class VanillaParser extends Parser {
         },
 
         // Extract Web API function calls
-        CallExpression: (path) => {
+        CallExpression: (path: any) => {
           const feature = this.extractWebAPICall(path.node, content);
           if (feature) {
             features.push({ ...feature, file: filePath });
@@ -296,7 +300,7 @@ export class VanillaParser extends Parser {
         },
 
         // Modern JavaScript syntax features
-        OptionalMemberExpression: (path) => {
+        OptionalMemberExpression: (path: any) => {
           features.push({
             feature: 'optional-chaining',
             type: 'js',
@@ -307,7 +311,7 @@ export class VanillaParser extends Parser {
           });
         },
 
-        OptionalCallExpression: (path) => {
+        OptionalCallExpression: (path: any) => {
           features.push({
             feature: 'optional-chaining',
             type: 'js',
@@ -319,7 +323,7 @@ export class VanillaParser extends Parser {
         },
 
         // Nullish coalescing
-        LogicalExpression: (path) => {
+        LogicalExpression: (path: any) => {
           if (path.node.operator === '??') {
             features.push({
               feature: 'nullish-coalescing',
@@ -333,7 +337,7 @@ export class VanillaParser extends Parser {
         },
 
         // Private class fields
-        ClassPrivateProperty: (path) => {
+        ClassPrivateProperty: (path: any) => {
           features.push({
             feature: 'private-fields',
             type: 'js',
@@ -344,7 +348,7 @@ export class VanillaParser extends Parser {
           });
         },
 
-        ClassPrivateMethod: (path) => {
+        ClassPrivateMethod: (path: any) => {
           features.push({
             feature: 'private-methods',
             type: 'js',
@@ -356,7 +360,7 @@ export class VanillaParser extends Parser {
         },
 
         // Top-level await
-        AwaitExpression: (path) => {
+        AwaitExpression: (path: any) => {
           if (this.isTopLevelAwait(path)) {
             features.push({
               feature: 'top-level-await',

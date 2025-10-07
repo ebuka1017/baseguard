@@ -278,7 +278,7 @@ export class ReactParser extends Parser {
     const features: DetectedFeature[] = [];
     
     // Check if this is likely a style object (has CSS-like properties)
-    const hasStyleProps = node.properties.some(prop => {
+    const hasStyleProps = node.properties.some((prop: any) => {
       if (t.isObjectProperty(prop) && (t.isIdentifier(prop.key) || t.isStringLiteral(prop.key))) {
         const key = t.isIdentifier(prop.key) ? prop.key.name : prop.key.value;
         return this.CSS_PROPERTIES.has(key) || key.includes('-') || key.startsWith('--');
@@ -290,7 +290,7 @@ export class ReactParser extends Parser {
       return features;
     }
 
-    node.properties.forEach(prop => {
+    node.properties.forEach((prop: any) => {
       if (t.isObjectProperty(prop)) {
         let key = '';
         if (t.isIdentifier(prop.key)) {
