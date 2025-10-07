@@ -84,7 +84,7 @@ describe('GeminiAnalyzer', () => {
       const analysis = await analyzer.analyzeViolation(mockViolation);
       
       expect(analysis.confidence).toBe(0.3); // Fallback confidence
-      expect(analysis.plainEnglish).toContain('API error');
+      expect(analysis.plainEnglish).toContain('Analysis unavailable');
       expect(analysis.fixStrategy).toBe('progressive enhancement');
     });
 
@@ -99,7 +99,7 @@ describe('GeminiAnalyzer', () => {
       const analysis = await analyzer.analyzeViolation(mockViolation);
       
       expect(analysis.confidence).toBe(0.3);
-      expect(analysis.plainEnglish).toContain('API error');
+      expect(analysis.plainEnglish).toContain('Analysis unavailable');
     });
   });
 

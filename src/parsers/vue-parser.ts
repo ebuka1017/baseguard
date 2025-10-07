@@ -168,7 +168,7 @@ export class VueParser extends Parser {
 
       traverse(ast, {
         // Extract JavaScript Web APIs
-        MemberExpression: (path) => {
+        MemberExpression: (path: any) => {
           const feature = this.extractWebAPIFeature(path.node, path, content);
           if (feature) {
             features.push({ ...feature, file: filePath });
@@ -176,7 +176,7 @@ export class VueParser extends Parser {
         },
 
         // Extract function calls to Web APIs
-        CallExpression: (path) => {
+        CallExpression: (path: any) => {
           const feature = this.extractWebAPICall(path.node, path, content);
           if (feature) {
             features.push({ ...feature, file: filePath });
@@ -184,7 +184,7 @@ export class VueParser extends Parser {
         },
 
         // Extract modern JavaScript syntax features
-        OptionalMemberExpression: (path) => {
+        OptionalMemberExpression: (path: any) => {
           features.push({
             feature: 'optional-chaining',
             type: 'js',
@@ -196,7 +196,7 @@ export class VueParser extends Parser {
         },
 
         // Nullish coalescing
-        LogicalExpression: (path) => {
+        LogicalExpression: (path: any) => {
           if (path.node.operator === '??') {
             features.push({
               feature: 'nullish-coalescing',
@@ -210,7 +210,7 @@ export class VueParser extends Parser {
         },
 
         // Private class fields
-        ClassPrivateProperty: (path) => {
+        ClassPrivateProperty: (path: any) => {
           features.push({
             feature: 'private-fields',
             type: 'js',
@@ -222,7 +222,7 @@ export class VueParser extends Parser {
         },
 
         // Top-level await
-        AwaitExpression: (path) => {
+        AwaitExpression: (path: any) => {
           if (this.isTopLevelAwait(path)) {
             features.push({
               feature: 'top-level-await',
@@ -253,7 +253,7 @@ export class VueParser extends Parser {
         const postcss = await LazyLoader.getPostCSS();
         const root = postcss.parse(content);
         
-        root.walkDecls(decl => {
+        root.walkDecls((decl: any) => {
           features.push({
             feature: decl.prop,
             type: 'css',
@@ -264,7 +264,7 @@ export class VueParser extends Parser {
           });
         });
 
-        root.walkRules(rule => {
+        root.walkRules((rule: any) => {
           // Extract CSS selectors that might be modern features
           if (rule.selector.includes(':has(') || 
               rule.selector.includes(':is(') || 
@@ -281,7 +281,7 @@ export class VueParser extends Parser {
           }
         });
 
-        root.walkAtRules(atRule => {
+        root.walkAtRules((atRule: any) => {
           // Extract at-rules like @supports, @container, etc.
           features.push({
             feature: `@${atRule.name}`,
@@ -308,13 +308,13 @@ export class VueParser extends Parser {
     const lines = content.split('\n');
     
     lines.forEach((line, index) => {
-      let match;
+      let match: RegExpExecArray | null;
       while ((match = htmlElementRegex.exec(line)) !== null) {
         const tagName = match[1];
         const attributes = match[2];
         
         // Check for modern HTML elements
-        if (this.isModernHTMLElement(tagName)) {
+        if (tagName && this.isModernHTMLElement(tagName)) {
           features.push({
             feature: tagName,
             type: 'html',
@@ -334,7 +334,7 @@ export class VueParser extends Parser {
               type: 'html',
               context: line.trim(),
               line: index + 1,
-              column: match.index,
+              column: match!.index,
               file: filePath
             });
           });
@@ -450,8 +450,11 @@ export class VueParser extends Parser {
     modernAttrPatterns.forEach(pattern => {
       if (pattern.test(attributes)) {
         const match = attributes.match(pattern);
-        if (match) {
-          modernAttrs.push(match[0].split('=')[0]);
+        if (match && match[0]) {
+          const attrName = match[0].split('=')[0];
+          if (attrName) {
+            modernAttrs.push(attrName);
+          }
         }
       }
     });

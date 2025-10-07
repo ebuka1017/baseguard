@@ -130,8 +130,8 @@ export class DebugLogger {
     }
 
     this.currentSession.endTime = new Date();
-    this.currentSession.summary.totalDuration = 
-      this.currentSession.endTime.getTime() - this.currentSession.startTime.getTime();
+    const duration = this.currentSession.endTime.getTime() - this.currentSession.startTime.getTime();
+    this.currentSession.summary.performance.totalDuration = duration;
 
     this.info('session', `Debug session ended: ${this.currentSession.id}`);
     

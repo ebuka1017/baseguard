@@ -473,7 +473,7 @@ export class VanillaParser extends Parser {
       });
 
       // Extract at-rules
-      root.walkAtRules(atRule => {
+      root.walkAtRules((atRule: any) => {
         const atRuleName = `@${atRule.name}`;
         features.push({
           feature: atRuleName,

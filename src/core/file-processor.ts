@@ -103,12 +103,15 @@ export class FileProcessor {
       );
 
       batchResults.forEach((result, index) => {
+        const task = batch[index];
+        if (!task) return;
+        
         if (result.status === 'fulfilled') {
           allFeatures.push(...result.value);
           // Cache the result
-          this.cacheManager.setCachedParseResult(batch[index].filePath, result.value);
+          this.cacheManager.setCachedParseResult(task.filePath, result.value);
         } else {
-          console.warn(`Failed to process ${batch[index].filePath}: ${result.reason}`);
+          console.warn(`Failed to process ${task.filePath}: ${result.reason}`);
         }
       });
 
@@ -222,7 +225,11 @@ export class FileProcessor {
   /**
    * Assign task to worker
    */
-  private async assignTaskToWorker(worker: Worker, task: WorkerTask): Promise<void> {
+  private async assignTaskToWorker(worker: Worker | undefined, task: WorkerTask): Promise<void> {
+    if (!worker) {
+      throw new Error('Worker is not available');
+    }
+    
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         console.warn(`Worker task ${task.id} timed out`);
