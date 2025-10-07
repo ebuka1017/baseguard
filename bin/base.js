@@ -6,10 +6,15 @@ import { init, check, fix, config, automation, status, diagnostics } from '../di
 import { showTerminalHeader, showVersionInfo, showGlobalHelp } from '../dist/ui/index.js';
 import { StartupOptimizer } from '../dist/core/startup-optimizer.js';
 
-// Initialize startup optimizations
-const startupPromise = StartupOptimizer.initialize().then(() => {
-  // Run additional startup optimizations
-  return StartupOptimizer.optimizeStartup();
+// Initialize startup optimizations with timeout
+const startupPromise = Promise.race([
+  StartupOptimizer.initialize().then(() => {
+    // Run additional startup optimizations
+    return StartupOptimizer.optimizeStartup();
+  }),
+  new Promise(resolve => setTimeout(resolve, 1000)) // Max 1 second for startup
+]).catch(() => {
+  // Ignore startup errors, continue with CLI
 });
 
 const program = new Command();
@@ -18,7 +23,7 @@ program
   .name('base')
   .description(chalk.cyan('🛡️ BaseGuard - Never ship incompatible code again\n') + 
     chalk.dim('Intelligent browser compatibility enforcement with AI-powered analysis and autonomous fixing'))
-  .version('1.0.2')
+  .version('1.0.3')
   .configureOutput({
     outputError: (str, write) => write(chalk.red(str))
   })
@@ -610,4 +615,14 @@ if (process.argv.length <= 2) {
   process.exit(0);
 }
 
-program.parse();
+// For help commands, don't wait for startup
+const isHelpCommand = process.argv.includes('--help') || process.argv.includes('-h') || process.argv.includes('help');
+if (isHelpCommand) {
+  // Parse immediately without waiting for startup
+  program.parse();
+} else {
+  // Wait for startup for other commands
+  startupPromise.finally(() => {
+    program.parse();
+  });
+}

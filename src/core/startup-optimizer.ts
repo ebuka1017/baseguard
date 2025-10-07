@@ -4,6 +4,8 @@
 export class StartupOptimizer {
   private static startTime = Date.now();
   private static initialized = false;
+  private static gcInterval: NodeJS.Timeout | null = null;
+  private static memoryInterval: NodeJS.Timeout | null = null;
 
   /**
    * Initialize BaseGuard with optimized startup
@@ -25,7 +27,7 @@ export class StartupOptimizer {
       this.initialized = true;
 
       const initTime = Date.now() - startTime;
-      if (initTime > 200) {
+      if (initTime > 1000) {
         console.warn(`Slow startup detected: ${initTime}ms`);
       }
     } catch (error) {
@@ -57,7 +59,7 @@ export class StartupOptimizer {
     // Enable garbage collection hints if available
     if (global.gc) {
       // Set up periodic GC for long-running processes
-      setInterval(() => {
+      this.gcInterval = setInterval(() => {
         const { MemoryManager } = require('./memory-manager.js');
         const memCheck = MemoryManager.checkMemoryUsage();
         
@@ -124,6 +126,16 @@ export class StartupOptimizer {
     const { LazyLoader } = require('./lazy-loader.js');
     const { MemoryManager } = require('./memory-manager.js');
 
+    // Clear intervals
+    if (this.gcInterval) {
+      clearInterval(this.gcInterval);
+      this.gcInterval = null;
+    }
+    if (this.memoryInterval) {
+      clearInterval(this.memoryInterval);
+      this.memoryInterval = null;
+    }
+
     // Clear caches
     LazyLoader.clearCache();
     
@@ -145,7 +157,7 @@ export class StartupOptimizer {
     const metrics = this.getStartupMetrics();
     
     // Check startup time
-    if (metrics.totalStartupTime > 500) {
+    if (metrics.totalStartupTime > 2000) {
       issues.push(`Slow startup: ${metrics.totalStartupTime}ms`);
       recommendations.push('Consider reducing dependencies or using lazy loading');
     }
@@ -183,7 +195,7 @@ export class StartupOptimizer {
 
     // Setup memory monitoring
     if (global.gc) {
-      setInterval(() => {
+      this.memoryInterval = setInterval(() => {
         const usage = process.memoryUsage();
         const heapUsedMB = usage.heapUsed / 1024 / 1024;
         

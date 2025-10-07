@@ -499,22 +499,28 @@ export class SystemErrorHandler {
 
   static async handleProcessSignals(): Promise<void> {
     const gracefulShutdown = async (signal: string) => {
-      console.log(chalk.yellow(`\n⚠️ Received ${signal}, shutting down gracefully...`));
-      
-      // Save error log before exit
-      try {
-        await SystemErrorHandler.saveErrorLog();
-      } catch (error) {
-        // Ignore errors during shutdown
+      // Only log for non-interactive signals (SIGTERM, not SIGINT from Ctrl+C)
+      if (signal !== 'SIGINT') {
+        console.log(chalk.yellow(`\n⚠️ Received ${signal}, shutting down gracefully...`));
       }
       
-      // Show error summary if there were issues
-      const summary = SystemErrorHandler.getErrorSummary();
-      if (summary.total > 0) {
-        console.log(chalk.cyan(`\n📊 Session summary: ${summary.total} errors encountered`));
-        if (summary.critical > 0) {
-          console.log(chalk.red(`   ${summary.critical} critical errors require attention`));
-        }
+      // Cleanup intervals and timers
+      try {
+        const { StartupOptimizer } = await import('./startup-optimizer.js');
+        StartupOptimizer.cleanup();
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+      
+      // Save error log before exit (but don't wait too long)
+      try {
+        const savePromise = SystemErrorHandler.saveErrorLog();
+        await Promise.race([
+          savePromise,
+          new Promise(resolve => setTimeout(resolve, 100)) // Max 100ms wait
+        ]);
+      } catch (error) {
+        // Ignore errors during shutdown
       }
       
       process.exit(0);
