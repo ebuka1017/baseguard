@@ -374,7 +374,7 @@ export class VanillaParser extends Parser {
         },
 
         // Dynamic imports
-        Import: (path) => {
+        Import: (path: any) => {
           features.push({
             feature: 'dynamic-import',
             type: 'js',
@@ -386,7 +386,7 @@ export class VanillaParser extends Parser {
         },
 
         // BigInt literals
-        BigIntLiteral: (path) => {
+        BigIntLiteral: (path: any) => {
           features.push({
             feature: 'bigint',
             type: 'js',
@@ -398,7 +398,7 @@ export class VanillaParser extends Parser {
         },
 
         // Numeric separators
-        NumericLiteral: (path) => {
+        NumericLiteral: (path: any) => {
           if ((path.node.extra as any)?.raw?.includes('_')) {
             features.push({
               feature: 'numeric-separators',
@@ -426,7 +426,7 @@ export class VanillaParser extends Parser {
       const root = postcss.parse(content);
       
       // Extract CSS properties
-      root.walkDecls(decl => {
+      root.walkDecls((decl: any) => {
         if (this.CSS_PROPERTIES.has(decl.prop) || decl.prop.startsWith('--')) {
           features.push({
             feature: decl.prop,
@@ -457,7 +457,7 @@ export class VanillaParser extends Parser {
       });
 
       // Extract CSS selectors
-      root.walkRules(rule => {
+      root.walkRules((rule: any) => {
         this.CSS_SELECTORS.forEach(selector => {
           if (rule.selector.includes(selector)) {
             features.push({
