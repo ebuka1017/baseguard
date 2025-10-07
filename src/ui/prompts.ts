@@ -1,5 +1,6 @@
 import inquirer from 'inquirer';
 import open from 'open';
+import chalk from 'chalk';
 import { Colors, UIComponents } from './components.js';
 import { ApiKeyManager } from '../core/api-key-manager.js';
 import type { BrowserTarget } from '../types/index.js';
@@ -300,8 +301,8 @@ export class Prompts {
       if (testResult.success) {
         spinner.succeed('Jules API key validated successfully');
         
-        // Guide through GitHub app installation
-        await this.setupJulesGitHubIntegration();
+        // Note: GitHub integration should be set up on the Jules dashboard
+        console.log(chalk.cyan('💡 Note: GitHub integration should be configured on the Jules dashboard.'));
         
         return keyPrompt.apiKey;
       } else {
@@ -329,66 +330,7 @@ export class Prompts {
     return undefined;
   }
 
-  /**
-   * Guide user through Jules GitHub app installation
-   */
-  static async setupJulesGitHubIntegration(): Promise<void> {
-    console.log(Colors.info('\n🔗 Setting up Jules GitHub integration'));
-    
-    const setupGitHub = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'setup',
-        message: 'Jules needs access to your GitHub repository for code fixing. Set up now?',
-        default: true
-      }
-    ]);
 
-    if (!setupGitHub.setup) {
-      UIComponents.showWarningBox('GitHub integration skipped. Jules will have limited functionality without repository access.');
-      return;
-    }
-
-    const openGitHub = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'open',
-        message: 'Open GitHub to install the Jules app?',
-        default: true
-      }
-    ]);
-
-    if (openGitHub.open) {
-      const spinner = UIComponents.createSpinner('Opening GitHub Apps...');
-      spinner.start();
-      
-      try {
-        await open('https://github.com/apps/jules-ai');
-        spinner.succeed('Opened Jules GitHub App page');
-      } catch (error) {
-        spinner.fail('Failed to open browser. Please visit https://github.com/apps/jules-ai manually');
-      }
-    }
-
-    console.log(Colors.muted('\nSteps to install Jules GitHub app:'));
-    UIComponents.showList([
-      'Click "Install" on the Jules GitHub app page',
-      'Select the repositories you want Jules to access',
-      'Complete the installation process',
-      'Return here when done'
-    ]);
-
-    await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'completed',
-        message: 'Have you completed the GitHub app installation?',
-        default: false
-      }
-    ]);
-
-    UIComponents.showSuccessBox('Jules GitHub integration setup complete!');
-  }
 
   /**
    * Set up Gemini API key with browser integration
@@ -684,5 +626,56 @@ export class Prompts {
         when: (answers) => answers.enabled
       }
     ]);
+  }
+
+  /**
+   * Choose coding agent for fixing
+   */
+  static async chooseCodingAgent(): Promise<{ primary: 'jules' | 'gemini'; fallback: 'jules' | 'gemini' }> {
+    console.log(chalk.cyan('\n🤖 Coding Agent Selection'));
+    console.log(chalk.dim('Choose which AI agent to use for code fixing:\n'));
+    
+    console.log(chalk.white('Jules (Google\'s Autonomous Coding Agent):'));
+    console.log(chalk.green('  ✅ Autonomous operation in cloud VMs'));
+    console.log(chalk.green('  ✅ Full repository context understanding'));
+    console.log(chalk.green('  ✅ Asynchronous processing'));
+    console.log(chalk.red('  ❌ Requires GitHub repository'));
+    console.log(chalk.red('  ❌ Cannot work with local/uncommitted files'));
+    
+    console.log(chalk.white('\nGemini 2.5 Pro (Direct API Integration):'));
+    console.log(chalk.green('  ✅ Works with any files (GitHub or not)'));
+    console.log(chalk.green('  ✅ Immediate processing'));
+    console.log(chalk.green('  ✅ Works with uncommitted/local files'));
+    console.log(chalk.green('  ✅ Grounded with real-time web search'));
+    console.log(chalk.yellow('  ⚠️ Requires manual code application'));
+    
+    const answers = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'primary',
+        message: 'Select primary coding agent:',
+        choices: [
+          { name: 'Gemini 2.5 Pro (recommended for most projects)', value: 'gemini' },
+          { name: 'Jules (for GitHub repositories with autonomous needs)', value: 'jules' }
+        ],
+        default: 'gemini'
+      },
+      {
+        type: 'list',
+        name: 'fallback',
+        message: 'Select fallback coding agent:',
+        choices: [
+          { name: 'Gemini 2.5 Pro', value: 'gemini' },
+          { name: 'Jules', value: 'jules' }
+        ],
+        default: 'gemini'
+      }
+    ]);
+    
+    console.log(chalk.green(`\n✅ Coding agents configured:`));
+    console.log(`   Primary: ${answers.primary}`);
+    console.log(`   Fallback: ${answers.fallback}`);
+    
+    return answers;
   }
 }

@@ -3,7 +3,7 @@ import { UIComponents } from '../ui/index.js';
 import { BaseGuard } from '../core/index.js';
 import { ConfigurationManager } from '../core/configuration.js';
 import { ErrorHandler } from '../core/error-handler.js';
-import { JulesImplementer } from '../ai/jules-implementer.js';
+import { UnifiedCodeFixer } from '../ai/unified-code-fixer.js';
 import { GeminiAnalyzer } from '../ai/gemini-analyzer.js';
 import { glob } from 'glob';
 
@@ -34,30 +34,34 @@ export async function fix(options: {
     
     // Initialize services
     const baseGuard = new BaseGuard(config);
-    const julesImplementer = new JulesImplementer(config.apiKeys.jules);
+    const unifiedCodeFixer = new UnifiedCodeFixer(config);
     const geminiAnalyzer = new GeminiAnalyzer(config.apiKeys.gemini);
     
-    // Check GitHub integration
-    const isGitHubSetup = await julesImplementer.isGitHubIntegrationSetup();
-    if (!isGitHubSetup) {
-      console.log(chalk.yellow('⚠️ Jules GitHub integration not set up'));
-      
-      const { default: inquirer } = await import('inquirer');
-      const { setupNow } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'setupNow',
-          message: 'Would you like to set up Jules GitHub integration now?',
-          default: true
-        }
-      ]);
-      
-      if (setupNow) {
-        await julesImplementer.setupGitHubIntegration();
-      } else {
-        console.log(chalk.yellow('GitHub integration required for Jules fixing. Exiting.'));
-        process.exit(0);
-      }
+    // Show agent status and recommendations
+    console.log(chalk.cyan('🤖 Coding Agent Status:'));
+    const agentStatus = await unifiedCodeFixer.getAgentStatus();
+    
+    const primaryAvailable = agentStatus.primary === 'jules' ? agentStatus.jules.available : agentStatus.gemini.available;
+    const fallbackAvailable = agentStatus.fallback === 'jules' ? agentStatus.jules.available : agentStatus.gemini.available;
+    
+    console.log(`   Primary: ${agentStatus.primary} ${primaryAvailable ? '✅' : '❌'}`);
+    console.log(`   Fallback: ${agentStatus.fallback} ${fallbackAvailable ? '✅' : '❌'}`);
+    
+    if (!primaryAvailable && !fallbackAvailable) {
+      console.log(chalk.red('\n❌ No coding agents are available'));
+      console.log(chalk.cyan('💡 Configure API keys to enable code fixing:'));
+      console.log(chalk.cyan('   • Run "base config set-keys" to configure API keys'));
+      console.log(chalk.cyan('   • Get Gemini API key: https://aistudio.google.com'));
+      console.log(chalk.cyan('   • Get Jules API key: https://jules.google.com/settings#api'));
+      process.exit(1);
+    }
+    
+    // Show agent-specific information
+    if (agentStatus.primary === 'jules' && agentStatus.jules.repoDetected) {
+      console.log(chalk.cyan('🔗 GitHub repository detected - Jules available for autonomous fixing'));
+    } else if (agentStatus.primary === 'gemini' || !agentStatus.jules.repoDetected) {
+      console.log(chalk.cyan('💎 Using Gemini 2.5 Pro for local file fixing'));
+      console.log(chalk.dim('   This works with any local files, no GitHub required'));
     }
     
     // Step 1: Check for violations
@@ -102,87 +106,87 @@ export async function fix(options: {
       return;
     }
     
-    // Step 3: Generate and apply fixes with Jules
-    console.log(chalk.cyan('\n🤖 Generating fixes with Jules AI...'));
-    const results = await julesImplementer.generateAndApplyFixes(violations, analyses);
+    // Step 3: Generate fixes with unified code fixer
+    console.log(chalk.cyan(`\n🤖 Generating fixes with ${agentStatus.primary}...`));
     
-    // Show results
-    console.log(chalk.cyan('\n📊 Fix Results:\n'));
+    const fixes = [];
+    let successCount = 0;
+    let failedCount = 0;
     
-    if (results.applied.length > 0) {
-      console.log(chalk.green(`✅ Applied ${results.applied.length} fixes:`));
-      results.applied.forEach(fix => {
-        console.log(chalk.green(`   • ${fix.filePath} - ${fix.violation.feature}`));
-      });
-      console.log();
-    }
-    
-    if (results.skipped.length > 0) {
-      console.log(chalk.yellow(`⏭️ Skipped ${results.skipped.length} fixes:`));
-      results.skipped.forEach(fix => {
-        console.log(chalk.yellow(`   • ${fix.filePath} - ${fix.violation.feature}`));
-      });
-      console.log();
-    }
-    
-    if (results.failed.length > 0) {
-      console.log(chalk.red(`❌ Failed ${results.failed.length} fixes:`));
-      results.failed.forEach(({ fix, error }) => {
-        console.log(chalk.red(`   • ${fix.filePath} - ${fix.violation.feature}: ${error}`));
-      });
-      console.log();
-    }
-    
-    // Show rollback option if fixes were applied
-    if (results.applied.length > 0) {
-      const { default: inquirer } = await import('inquirer');
-      const { showRollback } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'showRollback',
-          message: 'Would you like to see rollback options?',
-          default: false
-        }
-      ]);
+    for (let i = 0; i < violations.length; i++) {
+      const violation = violations[i];
+      const analysis = analyses[i];
       
-      if (showRollback) {
-        const { rollbackAction } = await inquirer.prompt([
-          {
-            type: 'list',
-            name: 'rollbackAction',
-            message: 'Rollback options:',
-            choices: [
-              { name: 'Keep all fixes', value: 'keep' },
-              { name: 'Rollback all fixes', value: 'rollback_all' },
-              { name: 'Rollback specific fixes', value: 'rollback_specific' }
-            ]
-          }
-        ]);
+      if (!violation || !analysis) continue;
+      
+      try {
+        console.log(chalk.cyan(`\n🔧 Fixing ${violation.feature} in ${violation.file}...`));
         
-        if (rollbackAction === 'rollback_all') {
-          await julesImplementer.rollbackAllFixes();
-          UIComponents.showSuccessBox('All fixes have been rolled back');
-        } else if (rollbackAction === 'rollback_specific') {
-          const appliedFiles = julesImplementer.getAppliedFixes();
-          const { filesToRollback } = await inquirer.prompt([
-            {
-              type: 'checkbox',
-              name: 'filesToRollback',
-              message: 'Select fixes to rollback:',
-              choices: appliedFiles.map(file => ({ name: file, value: file }))
-            }
-          ]);
-          
-          for (const file of filesToRollback) {
-            await julesImplementer.rollbackFix(file);
-          }
-          
-          if (filesToRollback.length > 0) {
-            UIComponents.showSuccessBox(`Rolled back ${filesToRollback.length} fixes`);
-          }
+        const fix = await unifiedCodeFixer.generateFix(violation, analysis);
+        fixes.push(fix);
+        successCount++;
+        
+        console.log(chalk.green(`✅ Fix generated (confidence: ${Math.round(fix.confidence * 100)}%)`));
+        
+        // Show preview if not in auto mode
+        if (!options.auto) {
+          console.log(chalk.dim('\nPreview:'));
+          console.log(chalk.dim(fix.preview.substring(0, 200) + (fix.preview.length > 200 ? '...' : '')));
         }
+        
+      } catch (error) {
+        failedCount++;
+        console.log(chalk.red(`❌ Failed to generate fix: ${error instanceof Error ? error.message : 'Unknown error'}`));
       }
     }
+    
+    if (fixes.length === 0) {
+      console.log(chalk.yellow('\n⚠️ No fixes were generated'));
+      return;
+    }
+    
+    // Show results summary
+    console.log(chalk.cyan('\n📊 Fix Generation Results:\n'));
+    console.log(chalk.green(`✅ Generated ${successCount} fixes`));
+    if (failedCount > 0) {
+      console.log(chalk.red(`❌ Failed to generate ${failedCount} fixes`));
+    }
+    
+    // Show fixes with previews
+    if (!options.auto && fixes.length > 0) {
+      console.log(chalk.cyan('\n🔍 Generated Fixes:\n'));
+      fixes.forEach((fix, index) => {
+        console.log(chalk.white(`${index + 1}. ${fix.violation.feature} in ${fix.filePath}`));
+        console.log(chalk.dim(`   Confidence: ${Math.round(fix.confidence * 100)}%`));
+        console.log(chalk.dim(`   Strategy: ${fix.analysis.fixStrategy}`));
+        
+        // Show a snippet of the explanation
+        const explanation = fix.explanation?.split('\n')[0] || 'No explanation available';
+        if (explanation.length > 80) {
+          console.log(chalk.dim(`   ${explanation.substring(0, 80)}...`));
+        } else {
+          console.log(chalk.dim(`   ${explanation}`));
+        }
+        console.log();
+      });
+    }
+    
+    // Show summary
+    console.log(chalk.cyan(`\n📈 Summary: ${successCount}/${violations.length} fixes generated successfully`));
+    
+    if (failedCount > 0) {
+      console.log(chalk.yellow(`\n⚠️ ${failedCount} fixes failed to generate. This may be due to:`));
+      console.log(chalk.yellow('   • Complex compatibility issues requiring manual review'));
+      console.log(chalk.yellow('   • API rate limits or temporary service issues'));
+      console.log(chalk.yellow('   • Files that couldn\'t be read or analyzed'));
+    }
+    
+    // Show next steps
+    console.log(chalk.cyan('\n💡 Next Steps:'));
+    console.log(chalk.cyan('   • Review the generated fixes above'));
+    console.log(chalk.cyan('   • Apply fixes manually to your code'));
+    console.log(chalk.cyan('   • Test your application after applying fixes'));
+    console.log(chalk.cyan('   • Run "base check" to verify fixes resolve violations'));
     
     UIComponents.showSuccessBox('Fix process completed!');
     
@@ -203,7 +207,7 @@ export async function fix(options: {
       UIComponents.showList([
         'Run "base init" to set up BaseGuard configuration',
         'Configure API keys with "base config set-keys"',
-        'Check GitHub integration for Jules fixing'
+        'Ensure you are in a GitHub repository for Jules fixing'
       ]);
     } else if (apiError.type === 'network') {
       UIComponents.showList([

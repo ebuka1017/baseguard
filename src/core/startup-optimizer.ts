@@ -170,4 +170,74 @@ export class StartupOptimizer {
       recommendations
     };
   }
+
+  /**
+   * Optimize memory usage by reducing object overhead
+   */
+  static optimizeMemoryUsage(): void {
+    // Enable V8 memory optimizations if available
+    if (process.env.NODE_ENV !== 'development') {
+      // Set V8 flags for better memory management
+      process.env.NODE_OPTIONS = (process.env.NODE_OPTIONS || '') + ' --max-old-space-size=512 --optimize-for-size';
+    }
+
+    // Setup memory monitoring
+    if (global.gc) {
+      setInterval(() => {
+        const usage = process.memoryUsage();
+        const heapUsedMB = usage.heapUsed / 1024 / 1024;
+        
+        // Force GC if memory usage is high
+        if (heapUsedMB > 100 && global.gc) {
+          global.gc();
+        }
+      }, 30000);
+    }
+  }
+
+  /**
+   * Reduce startup time by deferring non-critical operations
+   */
+  static async deferNonCriticalOperations(): Promise<void> {
+    // Defer heavy operations until after startup
+    setTimeout(async () => {
+      try {
+        // Preload remaining dependencies
+        const { LazyLoader } = await import('./lazy-loader.js');
+        LazyLoader.preloadCommon();
+        
+        // Initialize caches
+        const { CacheManager } = await import('./cache-manager.js');
+        // Cache initialization would happen here
+        
+        // Cleanup old logs
+        const { logger } = await import('./debug-logger.js');
+        logger.cleanupOldLogs().catch(() => {});
+      } catch (error) {
+        // Ignore errors in deferred operations
+      }
+    }, 100); // Defer by 100ms
+  }
+
+  /**
+   * Optimize startup by preloading critical dependencies
+   */
+  static async optimizeStartup(): Promise<void> {
+    // Start loading critical dependencies in background
+    const { LazyLoader } = await import('./lazy-loader.js');
+    
+    const criticalLoads = [
+      LazyLoader.getWebFeatures().catch(() => {}),
+      LazyLoader.getBabelParser().catch(() => {})
+    ];
+
+    // Don't wait for all to complete, just start the process
+    Promise.all(criticalLoads);
+    
+    // Setup memory optimizations
+    this.optimizeMemoryUsage();
+    
+    // Defer non-critical operations
+    this.deferNonCriticalOperations();
+  }
 }

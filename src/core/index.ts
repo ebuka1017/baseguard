@@ -11,3 +11,7 @@ export { DirectoryFilter } from './directory-filter.js';
 export { LazyLoader } from './lazy-loader.js';
 export { MemoryManager } from './memory-manager.js';
 export { StartupOptimizer } from './startup-optimizer.js';
+export { SystemErrorHandler } from './system-error-handler.js';
+export { GracefulDegradationManager } from './graceful-degradation-manager.js';
+export { ConfigurationRecovery } from './configuration-recovery.js';
+export { logger, DebugLogger } from './debug-logger.js';

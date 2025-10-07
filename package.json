@@ -1,6 +1,6 @@
 {
   "name": "baseguard",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "BaseGuard - Never ship incompatible code again. Intelligent browser compatibility enforcement with AI-powered analysis and autonomous fixing.",
   "main": "dist/index.js",
   "bin": {
@@ -12,8 +12,16 @@
     "dev": "tsc --watch",
     "test": "vitest --run",
     "test:watch": "vitest",
+    "test:e2e": "vitest --run tests/e2e/",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts"
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky install",
+    "prepublishOnly": "npm run build && npm run test && npm run lint",
+    "release": "npm version patch && npm publish",
+    "clean": "rm -rf dist"
   },
   "keywords": [
     "browser-compatibility",
@@ -22,7 +30,24 @@
     "cli",
     "ai",
     "automation",
-    "git-hooks"
+    "git-hooks",
+    "compatibility-checker",
+    "web-features",
+    "progressive-enhancement",
+    "polyfills",
+    "gemini",
+    "jules",
+    "code-fixing",
+    "linting",
+    "static-analysis",
+    "developer-tools",
+    "frontend",
+    "javascript",
+    "css",
+    "html",
+    "react",
+    "vue",
+    "svelte"
   ],
   "author": "BaseGuard Team",
   "license": "MIT",

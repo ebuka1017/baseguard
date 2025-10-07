@@ -1,9 +1,9 @@
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 
-// Add global type declaration for gc
+// Use Node.js built-in gc type
 declare global {
-  var gc: (() => void) | undefined;
+  var gc: NodeJS.GCFunction | undefined;
 }
 
 /**
@@ -292,3 +292,4 @@ class ViolationTracker {
     this.fileIndex.clear();
     this.nextFileId = 0;
   }
+}

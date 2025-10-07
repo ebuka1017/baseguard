@@ -138,7 +138,7 @@ export function showGlobalHelp(): void {
   console.log(chalk.white('AI SERVICES:'));
   console.log(`  ${chalk.cyan('Gemini:')} AI analysis of compatibility issues`);
   console.log(`    Get API key: ${chalk.blue('https://aistudio.google.com')}`);
-  console.log(`  ${chalk.cyan('Jules:')}  Autonomous code fixing with GitHub integration`);
+  console.log(`  ${chalk.cyan('Jules:')}  Autonomous code fixing (requires GitHub repository)`);
   console.log(`    Get API key: ${chalk.blue('https://jules.google.com')}\n`);
   
   console.log(chalk.white('SUPPORTED FILES:'));

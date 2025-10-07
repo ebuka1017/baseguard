@@ -7,7 +7,10 @@ import { showTerminalHeader, showVersionInfo, showGlobalHelp } from '../dist/ui/
 import { StartupOptimizer } from '../dist/core/startup-optimizer.js';
 
 // Initialize startup optimizations
-const startupPromise = StartupOptimizer.initialize();
+const startupPromise = StartupOptimizer.initialize().then(() => {
+  // Run additional startup optimizations
+  return StartupOptimizer.optimizeStartup();
+});
 
 const program = new Command();
 
@@ -15,7 +18,7 @@ program
   .name('base')
   .description(chalk.cyan('🛡️ BaseGuard - Never ship incompatible code again\n') + 
     chalk.dim('Intelligent browser compatibility enforcement with AI-powered analysis and autonomous fixing'))
-  .version('1.0.0')
+  .version('1.0.2')
   .configureOutput({
     outputError: (str, write) => write(chalk.red(str))
   })
@@ -127,9 +130,9 @@ program
   .option('--files <pattern>', 'File pattern to fix using glob syntax', '**/*.{js,jsx,ts,tsx,vue,svelte,css,html}')
   .addHelpText('after', `
 ${chalk.cyan('Prerequisites:')}
-  • Gemini API key (for analysis) - Get from ${chalk.blue('https://aistudio.google.com')}
-  • Jules API key (for fixing) - Get from ${chalk.blue('https://jules.google.com')}
-  • GitHub integration setup for Jules (guided during first use)
+  • Gemini API key (for analysis and fixing) - Get from ${chalk.blue('https://aistudio.google.com')}
+  • Jules API key (optional, for GitHub repos) - Get from ${chalk.blue('https://jules.google.com')}
+  • Choose your coding agent: "base config coding-agent"
 
 ${chalk.cyan('Examples:')}
   ${chalk.dim('$')} base fix                                 ${chalk.gray('# Interactive fix with confirmation prompts')}
@@ -140,9 +143,13 @@ ${chalk.cyan('Examples:')}
 ${chalk.cyan('How it works:')}
   1. ${chalk.white('Scan')} - Detects compatibility violations using Baseline data
   2. ${chalk.white('Analyze')} - Gemini AI researches impact and fix strategies  
-  3. ${chalk.white('Fix')} - Jules AI generates progressive enhancement code
+  3. ${chalk.white('Fix')} - AI generates progressive enhancement code (Jules or Gemini)
   4. ${chalk.white('Review')} - Shows preview of changes before applying
   5. ${chalk.white('Apply')} - Updates files with compatibility fixes
+
+${chalk.cyan('Coding Agents:')}
+  • ${chalk.white('Gemini 2.5 Pro')} - Works with any files, immediate processing
+  • ${chalk.white('Jules')} - GitHub repos only, autonomous cloud processing
 
 ${chalk.cyan('Fix Strategies:')}
   • Progressive enhancement with @supports for CSS
@@ -150,8 +157,9 @@ ${chalk.cyan('Fix Strategies:')}
   • Polyfills and fallbacks for older browsers
   • Graceful degradation patterns
 
-${chalk.cyan('Setup API Keys:')}
-  Run ${chalk.white('base config set-keys')} to configure AI services
+${chalk.cyan('Setup:')}
+  Run ${chalk.white('base config set-keys')} to configure API keys
+  Run ${chalk.white('base config coding-agent')} to choose your preferred agent
 `)
   .action(async (options) => {
     await startupPromise;
@@ -303,17 +311,44 @@ ${chalk.cyan('Recovery Process:')}
   5. Validates final result
 
 ${chalk.cyan('Examples:')}
-  ${chalk.dim('
-</content>
-</file>)} base config recover                ${chalk.gray('# Automatic recovery')}
-  ${chalk.dim('
-</content>
-</file>)} base config recover --backup       ${chalk.gray('# Create backup first')}
-  ${chalk.dim('
-</content>
-</file>)} base config recover --interactive  ${chalk.gray('# Interactive wizard')}
+  ${chalk.dim('$')} base config recover                ${chalk.gray('# Automatic recovery')}
+  ${chalk.dim('$')} base config recover --backup       ${chalk.gray('# Create backup first')}
+  ${chalk.dim('$')} base config recover --interactive  ${chalk.gray('# Interactive wizard')}
 `)
   .action((options) => config('recover', options));
+
+configCmd
+  .command('coding-agent')
+  .description('Manage coding agent selection (Jules vs Gemini)')
+  .option('--agent <agent>', 'Set primary agent (jules or gemini)')
+  .option('--show', 'Show current agent configuration and status')
+  .addHelpText('after', `
+${chalk.cyan('Coding Agents:')}
+  ${chalk.white('Jules')}    - Google's autonomous coding agent (GitHub repos only)
+  ${chalk.white('Gemini')}   - Gemini 2.5 Pro direct API (works with any files)
+
+${chalk.cyan('Agent Comparison:')}
+  Jules:
+    ✅ Autonomous operation in cloud VMs
+    ✅ Full repository context understanding
+    ✅ Asynchronous processing
+    ❌ Requires GitHub repository
+    ❌ Cannot work with local/uncommitted files
+
+  Gemini:
+    ✅ Works with any files (GitHub or not)
+    ✅ Immediate processing
+    ✅ Works with uncommitted/local files
+    ✅ Grounded with real-time web search
+    ⚠️ Requires manual code application
+
+${chalk.cyan('Examples:')}
+  ${chalk.dim('$')} base config coding-agent --show     ${chalk.gray('# Show current configuration')}
+  ${chalk.dim('$')} base config coding-agent --agent gemini  ${chalk.gray('# Set Gemini as primary')}
+  ${chalk.dim('$')} base config coding-agent --agent jules   ${chalk.gray('# Set Jules as primary')}
+  ${chalk.dim('$')} base config coding-agent             ${chalk.gray('# Interactive selection')}
+`)
+  .action((options) => config('coding-agent', options));
 
 // Automation and git hooks
 const autoCmd = program
@@ -476,21 +511,11 @@ ${chalk.cyan('Status Information:')}
   • Recovery recommendations
 
 ${chalk.cyan('Examples:')}
-  ${chalk.dim('
-</content>
-</file>)} base status                    ${chalk.gray('# Show basic system status')}
-  ${chalk.dim('
-</content>
-</file>)} base status --verbose          ${chalk.gray('# Show detailed information')}
-  ${chalk.dim('
-</content>
-</file>)} base status --services         ${chalk.gray('# Check service availability')}
-  ${chalk.dim('
-</content>
-</file>)} base status --config           ${chalk.gray('# Show configuration status')}
-  ${chalk.dim('
-</content>
-</file>)} base status --errors           ${chalk.gray('# Show error information')}
+  ${chalk.dim('$')} base status                    ${chalk.gray('# Show basic system status')}
+  ${chalk.dim('$')} base status --verbose          ${chalk.gray('# Show detailed information')}
+  ${chalk.dim('$')} base status --services         ${chalk.gray('# Check service availability')}
+  ${chalk.dim('$')} base status --config           ${chalk.gray('# Show configuration status')}
+  ${chalk.dim('$')} base status --errors           ${chalk.gray('# Show error information')}
 
 ${chalk.cyan('Health Levels:')}
   ${chalk.green('✅ Healthy')}    All systems operational

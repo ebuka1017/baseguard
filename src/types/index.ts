@@ -50,6 +50,10 @@ export interface Configuration {
     jules: string | null;
     gemini: string | null;
   };
+  codingAgent: {
+    primary: 'jules' | 'gemini';
+    fallback: 'jules' | 'gemini';
+  };
   automation: {
     enabled: boolean;
     trigger: 'pre-commit' | 'pre-push';

@@ -15,6 +15,8 @@ export async function config(action: string, options?: {
   format?: string;
   backup?: boolean;
   interactive?: boolean;
+  agent?: string;
+  show?: boolean;
 }): Promise<void> {
   try {
     switch (action) {
@@ -50,6 +52,9 @@ export async function config(action: string, options?: {
         break;
       case 'recover':
         await recoverConfiguration(options);
+        break;
+      case 'coding-agent':
+        await manageCodingAgent(options);
         break;
       default:
         UIComponents.showErrorBox(`Unknown config action: ${action}`);
@@ -448,10 +453,131 @@ function showConfigHelp(): void {
     'base config restore --file <backup> - Restore from backup',
     'base config recover - Attempt automatic configuration recovery',
     'base config recover --interactive - Run interactive recovery wizard',
+    'base config coding-agent - Manage coding agent selection (Jules vs Gemini)',
+    'base config coding-agent --show - Show current agent configuration',
+    'base config coding-agent --agent gemini - Set Gemini as primary agent',
     '',
     'Shorthand commands:',
     'base add "chrome 100" - Add browser target',
     'base remove chrome - Remove browser target',
     'base list - List configuration summary'
   ]);
+}
+
+async function manageCodingAgent(options?: { agent?: string; show?: boolean }): Promise<void> {
+  try {
+    const config = await ConfigurationManager.load();
+    
+    if (options?.show) {
+      // Show current coding agent configuration
+      console.log(chalk.cyan('🤖 Coding Agent Configuration\n'));
+      console.log(`Primary Agent: ${chalk.white(config.codingAgent.primary)}`);
+      console.log(`Fallback Agent: ${chalk.white(config.codingAgent.fallback)}`);
+      
+      // Show agent status
+      const { UnifiedCodeFixer } = await import('../ai/unified-code-fixer.js');
+      const unifiedFixer = new UnifiedCodeFixer(config);
+      const status = await unifiedFixer.getAgentStatus();
+      
+      console.log(chalk.cyan('\n📊 Agent Status:'));
+      console.log(`Jules: ${status.jules.configured ? '🔑' : '❌'} configured, ${status.jules.available ? '✅' : '❌'} available`);
+      if (status.jules.repoDetected !== undefined) {
+        console.log(`       ${status.jules.repoDetected ? '✅' : '❌'} GitHub repository detected`);
+      }
+      console.log(`Gemini: ${status.gemini.configured ? '🔑' : '❌'} configured, ${status.gemini.available ? '✅' : '❌'} available`);
+      
+      // Show comparison
+      unifiedFixer.showAgentComparison();
+      return;
+    }
+    
+    if (options?.agent) {
+      // Set specific agent
+      const agent = options.agent.toLowerCase();
+      if (agent !== 'jules' && agent !== 'gemini') {
+        UIComponents.showErrorBox('Invalid agent. Use "jules" or "gemini"');
+        return;
+      }
+      
+      config.codingAgent.primary = agent as 'jules' | 'gemini';
+      await ConfigurationManager.save(config);
+      
+      console.log(chalk.green(`✅ Primary coding agent set to ${agent}`));
+      
+      // Show setup instructions if API key is missing
+      if (agent === 'jules' && !config.apiKeys.jules) {
+        console.log(chalk.yellow('\n⚠️ Jules API key not configured'));
+        console.log(chalk.cyan('Get your Jules API key: https://jules.google.com/settings#api'));
+        console.log(chalk.cyan('Run "base config set-keys" to configure it'));
+      } else if (agent === 'gemini' && !config.apiKeys.gemini) {
+        console.log(chalk.yellow('\n⚠️ Gemini API key not configured'));
+        console.log(chalk.cyan('Get your Gemini API key: https://aistudio.google.com'));
+        console.log(chalk.cyan('Run "base config set-keys" to configure it'));
+      }
+      
+      return;
+    }
+    
+    // Interactive agent selection
+    const { UnifiedCodeFixer } = await import('../ai/unified-code-fixer.js');
+    const unifiedFixer = new UnifiedCodeFixer(config);
+    
+    // Show current status
+    console.log(chalk.cyan('🤖 Current Coding Agent Configuration\n'));
+    console.log(`Primary: ${config.codingAgent.primary}`);
+    console.log(`Fallback: ${config.codingAgent.fallback}`);
+    
+    // Get recommendation
+    const recommendation = await unifiedFixer.getRecommendedAgent();
+    console.log(chalk.cyan(`\n💡 Recommended: ${recommendation.agent}`));
+    console.log(chalk.dim(`   Reason: ${recommendation.reason}`));
+    
+    // Interactive selection
+    const { default: inquirer } = await import('inquirer');
+    const answers = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'primary',
+        message: 'Select primary coding agent:',
+        choices: [
+          { name: 'Gemini 2.5 Pro (works with any files, immediate)', value: 'gemini' },
+          { name: 'Jules (GitHub repos only, autonomous)', value: 'jules' }
+        ],
+        default: recommendation.agent
+      },
+      {
+        type: 'list',
+        name: 'fallback',
+        message: 'Select fallback coding agent:',
+        choices: [
+          { name: 'Gemini 2.5 Pro', value: 'gemini' },
+          { name: 'Jules', value: 'jules' }
+        ],
+        default: 'gemini'
+      }
+    ]);
+    
+    config.codingAgent.primary = answers.primary;
+    config.codingAgent.fallback = answers.fallback;
+    
+    await ConfigurationManager.save(config);
+    
+    console.log(chalk.green('\n✅ Coding agent configuration updated'));
+    console.log(`Primary: ${answers.primary}`);
+    console.log(`Fallback: ${answers.fallback}`);
+    
+    // Show next steps
+    console.log(chalk.cyan('\n🔧 Next Steps:'));
+    if (!config.apiKeys[answers.primary as keyof typeof config.apiKeys]) {
+      console.log(chalk.cyan(`• Configure ${answers.primary} API key: "base config set-keys"`));
+    }
+    if (answers.primary !== answers.fallback && !config.apiKeys[answers.fallback as keyof typeof config.apiKeys]) {
+      console.log(chalk.cyan(`• Configure ${answers.fallback} API key for fallback: "base config set-keys"`));
+    }
+    console.log(chalk.cyan('• Test with: "base fix --analyze-only"'));
+    
+  } catch (error) {
+    UIComponents.showErrorBox(`Failed to manage coding agent: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    process.exit(1);
+  }
 }

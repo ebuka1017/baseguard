@@ -2,10 +2,11 @@ import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';
-import open from 'open';
+
 
 /**
  * GitHub repository manager for Jules integration
+ * Note: GitHub app installation should be done on the Jules dashboard, not here
  */
 export class GitHubManager {
   private repoOwner: string | null = null;
@@ -13,33 +14,9 @@ export class GitHubManager {
   private sourceIdentifier: string | null = null;
 
   /**
-   * Guide user through Jules GitHub app installation
-   */
-  async setupJulesGitHubIntegration(): Promise<string> {
-    console.log(chalk.cyan('\n🔗 Setting up Jules GitHub Integration\n'));
-    
-    // Step 1: Check if we're in a git repository
-    if (!this.isGitRepository()) {
-      throw new Error('Not in a git repository. Please run this command from within a git repository.');
-    }
-
-    // Step 2: Get repository information
-    await this.detectRepositoryInfo();
-    
-    // Step 3: Guide user through GitHub app installation
-    await this.guideGitHubAppInstallation();
-    
-    // Step 4: Verify connection and get source identifier
-    const sourceId = await this.getSourceIdentifier();
-    
-    console.log(chalk.green('✅ Jules GitHub integration setup complete!'));
-    return sourceId;
-  }
-
-  /**
    * Check if current directory is a git repository
    */
-  private isGitRepository(): boolean {
+  isGitRepository(): boolean {
     try {
       execSync('git rev-parse --git-dir', { stdio: 'ignore' });
       return true;
@@ -51,7 +28,7 @@ export class GitHubManager {
   /**
    * Detect repository owner and name from git remote
    */
-  private async detectRepositoryInfo(): Promise<void> {
+  async detectRepositoryInfo(): Promise<void> {
     try {
       const remoteUrl = execSync('git config --get remote.origin.url', { encoding: 'utf8' }).trim();
       
@@ -71,67 +48,22 @@ export class GitHubManager {
     }
   }
 
-  /**
-   * Guide user through GitHub app installation process
-   */
-  private async guideGitHubAppInstallation(): Promise<void> {
-    console.log(chalk.yellow('\n📋 Jules GitHub App Installation Steps:\n'));
-    
-    console.log('1. Opening Jules GitHub app installation page...');
-    
-    // Open Jules GitHub app installation URL
-    const installUrl = 'https://github.com/apps/jules-ai';
-    await open(installUrl);
-    
-    console.log(chalk.dim(`   ${installUrl}`));
-    
-    console.log('\n2. Follow these steps in your browser:');
-    console.log('   • Click "Install" on the Jules app page');
-    console.log('   • Select your repository or organization');
-    console.log(`   • Grant access to ${this.repoOwner}/${this.repoName}`);
-    console.log('   • Complete the installation process');
-    
-    console.log('\n3. After installation:');
-    console.log('   • Return to this terminal');
-    console.log('   • The setup will continue automatically');
-    
-    // Wait for user confirmation
-    await this.waitForUserConfirmation();
-  }
 
-  /**
-   * Wait for user to confirm GitHub app installation
-   */
-  private async waitForUserConfirmation(): Promise<void> {
-    const { default: inquirer } = await import('inquirer');
-    
-    const { confirmed } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'confirmed',
-        message: 'Have you completed the Jules GitHub app installation?',
-        default: false
-      }
-    ]);
-    
-    if (!confirmed) {
-      console.log(chalk.yellow('\nPlease complete the GitHub app installation and run this command again.'));
-      process.exit(0);
-    }
-  }
 
   /**
    * Get source identifier for Jules API
    */
-  private async getSourceIdentifier(): Promise<string> {
+  async getSourceIdentifier(): Promise<string> {
+    if (!this.repoOwner || !this.repoName) {
+      await this.detectRepositoryInfo();
+    }
+    
     if (!this.repoOwner || !this.repoName) {
       throw new Error('Repository information not available');
     }
     
     // Generate source identifier in the format expected by Jules
     this.sourceIdentifier = `sources/github/${this.repoOwner}/${this.repoName}`;
-    
-    console.log(chalk.blue(`🔗 Source identifier: ${this.sourceIdentifier}`));
     
     return this.sourceIdentifier;
   }
@@ -174,7 +106,7 @@ export class GitHubManager {
   }
 
   /**
-   * Check if Jules GitHub integration is set up
+   * Check if we can detect repository information (GitHub integration is handled on Jules dashboard)
    */
   async isJulesIntegrationSetup(): Promise<boolean> {
     try {
@@ -183,7 +115,7 @@ export class GitHubManager {
       }
       
       await this.detectRepositoryInfo();
-      return await this.verifyGitHubConnection();
+      return this.repoOwner !== null && this.repoName !== null;
     } catch {
       return false;
     }

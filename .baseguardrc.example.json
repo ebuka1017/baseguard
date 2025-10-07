@@ -1,0 +1,64 @@
+{
+  "version": "1.0.2",
+  "targets": [
+    "chrome baseline",
+    "firefox baseline",
+    "safari baseline"
+  ],
+  "codingAgent": {
+    "primary": "gemini",
+    "fallback": "jules"
+  },
+  "apiKeys": {
+    "gemini": "AIza...",
+    "jules": "your-jules-api-key"
+  },
+  "automation": {
+    "enabled": true,
+    "trigger": "pre-commit",
+    "autoAnalysis": true,
+    "autoFix": false,
+    "blockCommits": true
+  },
+  "files": {
+    "include": [
+      "src/**/*.{js,jsx,ts,tsx,vue,svelte,css,html}",
+      "components/**/*.{js,jsx,ts,tsx,vue,svelte}",
+      "pages/**/*.{js,jsx,ts,tsx,vue,svelte}"
+    ],
+    "exclude": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      ".next/**",
+      "coverage/**",
+      "**/*.min.js",
+      "**/*.min.css",
+      "**/*.test.{js,ts,jsx,tsx}",
+      "**/*.spec.{js,ts,jsx,tsx}"
+    ]
+  },
+  "performance": {
+    "maxWorkers": 8,
+    "maxFiles": 5000,
+    "cacheSize": 2000,
+    "streamThreshold": 10485760
+  },
+  "output": {
+    "format": "table",
+    "verbose": false,
+    "colors": true,
+    "showContext": true
+  },
+  "analysis": {
+    "enableGrounding": true,
+    "confidenceThreshold": 0.7,
+    "maxSuggestions": 3,
+    "includeExamples": true
+  },
+  "security": {
+    "validateApiKeys": true,
+    "autoAddToGitignore": true,
+    "encryptConfig": false
+  }
+}

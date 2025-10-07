@@ -77,6 +77,10 @@ export class ConfigurationManager {
         jules: null,
         gemini: null
       },
+      codingAgent: {
+        primary: 'gemini', // 'jules' or 'gemini'
+        fallback: 'gemini' // fallback when primary fails
+      },
       automation: {
         enabled: false,
         trigger: 'pre-commit',
@@ -118,6 +122,10 @@ export class ConfigurationManager {
       apiKeys: {
         jules: config.apiKeys?.jules || null,
         gemini: config.apiKeys?.gemini || null
+      },
+      codingAgent: {
+        primary: this.validateCodingAgent(config.codingAgent?.primary) || defaultConfig.codingAgent.primary,
+        fallback: this.validateCodingAgent(config.codingAgent?.fallback) || defaultConfig.codingAgent.fallback
       },
       automation: {
         enabled: config.automation?.enabled ?? defaultConfig.automation.enabled,
@@ -190,6 +198,16 @@ export class ConfigurationManager {
   private static validateTrigger(trigger: any): 'pre-commit' | 'pre-push' | null {
     if (trigger === 'pre-commit' || trigger === 'pre-push') {
       return trigger;
+    }
+    return null;
+  }
+
+  /**
+   * Validate coding agent selection
+   */
+  private static validateCodingAgent(agent: any): 'jules' | 'gemini' | null {
+    if (agent === 'jules' || agent === 'gemini') {
+      return agent;
     }
     return null;
   }
@@ -437,6 +455,18 @@ export class ConfigurationManager {
       }
     }
 
+    // Validate coding agent
+    if (!config.codingAgent || typeof config.codingAgent !== 'object') {
+      errors.push('Coding agent configuration must be an object');
+    } else {
+      if (config.codingAgent.primary !== 'jules' && config.codingAgent.primary !== 'gemini') {
+        errors.push('Primary coding agent must be "jules" or "gemini"');
+      }
+      if (config.codingAgent.fallback !== 'jules' && config.codingAgent.fallback !== 'gemini') {
+        errors.push('Fallback coding agent must be "jules" or "gemini"');
+      }
+    }
+
     // Validate automation
     if (!config.automation || typeof config.automation !== 'object') {
       errors.push('Automation configuration must be an object');
@@ -479,6 +509,13 @@ export class ConfigurationManager {
       if (config.apiKeys) {
         migratedConfig.apiKeys.jules = config.apiKeys.jules || null;
         migratedConfig.apiKeys.gemini = config.apiKeys.gemini || null;
+      }
+      
+      if (config.codingAgent) {
+        migratedConfig.codingAgent = {
+          primary: this.validateCodingAgent(config.codingAgent.primary) || 'gemini',
+          fallback: this.validateCodingAgent(config.codingAgent.fallback) || 'gemini'
+        };
       }
       
       if (config.automation) {

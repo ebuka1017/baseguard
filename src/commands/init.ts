@@ -69,11 +69,10 @@ export async function init(options: {
       }
     }
     
-    // Set up API keys if not skipped
+    // Set up API keys and coding agent if not skipped
     if (!options.skipApiKeys) {
       spinner.stop();
       const apiKeys = await Prompts.setupApiKeys();
-      spinner.start();
       
       if (apiKeys.julesApiKey) {
         config.apiKeys.jules = apiKeys.julesApiKey;
@@ -81,6 +80,21 @@ export async function init(options: {
       if (apiKeys.geminiApiKey) {
         config.apiKeys.gemini = apiKeys.geminiApiKey;
       }
+      
+      // Configure coding agent based on available keys
+      if (apiKeys.julesApiKey && apiKeys.geminiApiKey) {
+        const codingAgentChoice = await Prompts.chooseCodingAgent();
+        config.codingAgent.primary = codingAgentChoice.primary;
+        config.codingAgent.fallback = codingAgentChoice.fallback;
+      } else if (apiKeys.julesApiKey) {
+        config.codingAgent.primary = 'jules';
+        config.codingAgent.fallback = 'jules';
+      } else if (apiKeys.geminiApiKey) {
+        config.codingAgent.primary = 'gemini';
+        config.codingAgent.fallback = 'gemini';
+      }
+      
+      spinner.start();
     }
     
     await ConfigurationManager.save(config);

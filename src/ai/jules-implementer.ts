@@ -6,6 +6,7 @@ import chalk from 'chalk';
 
 /**
  * Jules AI implementer for autonomous code fixing
+ * Note: Jules requires GitHub repositories and cannot work with local files
  */
 export class JulesImplementer {
   private apiKey: string;
@@ -354,16 +355,16 @@ Please fix this compatibility issue while maintaining the existing functionality
   }
 
   /**
-   * Setup Jules GitHub integration
+   * Get repository source identifier (GitHub integration is handled on Jules dashboard)
    */
-  async setupGitHubIntegration(): Promise<string> {
-    return await this.githubManager.setupJulesGitHubIntegration();
+  async getRepositorySource(): Promise<string> {
+    return await this.githubManager.getSourceIdentifier();
   }
 
   /**
-   * Check if GitHub integration is set up
+   * Check if repository information is available (GitHub integration is handled on Jules dashboard)
    */
-  async isGitHubIntegrationSetup(): Promise<boolean> {
+  async isRepositoryDetected(): Promise<boolean> {
     return await this.githubManager.isJulesIntegrationSetup();
   }
 
