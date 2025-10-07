@@ -71,7 +71,7 @@ async function setupGitRepo(repoPath: string): Promise<void> {
   // Create initial commit
   await fs.writeFile(path.join(repoPath, 'README.md'), '# Test Project\n');
   runGit(['add', 'README.md'], repoPath);
-  runGit(['commit', '-m', 'Initial commit'], repoPath);
+  runGit(['commit', '-m', '"Initial commit"'], repoPath);
 }
 
 // Helper function to create test files with violations
