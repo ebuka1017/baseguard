@@ -1,6 +1,6 @@
 {
   "name": "baseguard",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "BaseGuard - Never ship incompatible code again. Intelligent browser compatibility enforcement with AI-powered analysis and autonomous fixing.",
   "main": "dist/index.js",
   "bin": {
