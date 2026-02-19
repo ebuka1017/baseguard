@@ -489,7 +489,7 @@ export class SvelteParser extends Parser {
     return Array.from(this.SVELTE_DIRECTIVES).some((directive: string) => attrName.startsWith(directive));
   }
 
-  private isModernHTMLAttribute(attrName: string, attrValue: any): boolean {
+  private isModernHTMLAttribute(attrName: string, _attrValue: any): boolean {
     const modernAttrs = new Set([
       'loading', 'decoding', 'fetchpriority', 'enterkeyhint', 'inputmode'
     ]);

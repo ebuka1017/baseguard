@@ -1,5 +1,4 @@
 import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
 import chalk from 'chalk';
 import ora from 'ora';
 import inquirer from 'inquirer';
@@ -8,7 +7,6 @@ import { ConfigurationManager } from '../core/configuration.js';
 import { BaseGuard } from '../core/baseguard.js';
 import { UIComponents } from '../ui/components.js';
 import { GeminiAnalyzer } from '../ai/gemini-analyzer.js';
-import { JulesImplementer } from '../ai/jules-implementer.js';
 
 /**
  * Automation engine for git workflow integration
@@ -77,7 +75,7 @@ export class AutomationEngine {
       await this.showManualOptions(violations, analyses);
 
       // Block commit if configured to do so
-      if (this.config.automation.blockCommit && !options.strict === false) {
+      if (this.config.automation.blockCommit && options.strict !== false) {
         console.log(chalk.red('❌ Commit blocked due to compatibility issues'));
         console.log(chalk.dim('Use --no-verify to bypass this check'));
         process.exit(1);
@@ -206,7 +204,6 @@ export class AutomationEngine {
     const spinner = ora('Generating fixes with AI...').start();
     
     try {
-      const implementer = new JulesImplementer(this.config.apiKeys.jules);
       const fixes: Fix[] = [];
 
       // Generate fixes for violations that have analyses
@@ -309,14 +306,17 @@ export class AutomationEngine {
       case 'manual':
         console.log(chalk.blue('💡 Fix the violations manually and run git commit again'));
         process.exit(1);
+        return;
         
       case 'analyze':
-        console.log(chalk.blue('🔍 Run "base check --analyze" to get AI analysis'));
+        console.log(chalk.blue('🔍 Run "base fix --analyze-only" to get AI analysis'));
         process.exit(1);
+        return;
         
       case 'fix':
         console.log(chalk.blue('🤖 Run "base fix" to generate and preview AI fixes'));
         process.exit(1);
+        return;
         
       default:
         process.exit(1);

@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { mkdir } from 'fs/promises';
 import chalk from 'chalk';
-import type { Fix, Violation } from '../types/index.js';
+import type { Fix } from '../types/index.js';
 
 /**
  * Fix manager for previewing and applying code fixes
@@ -226,7 +226,7 @@ export class FixManager {
     const lines = originalContent.split('\n');
     const patchLines = patch.split('\n');
     
-    let result = [...lines];
+    const result = [...lines];
     let currentLine = 0;
     
     for (const patchLine of patchLines) {

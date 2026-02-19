@@ -79,8 +79,18 @@ export class LazyLoader {
     this.loadPromises.set(key, loadPromise);
 
     try {
-      const traverse = await loadPromise;
-      this.instances.set(key, traverse.default || traverse);
+      const traverseModule = await loadPromise;
+      const traverseExport = traverseModule.default || traverseModule;
+      const traverse =
+        typeof traverseExport === 'function'
+          ? traverseExport
+          : (traverseExport as any)?.default;
+
+      if (typeof traverse !== 'function') {
+        throw new Error('Failed to resolve @babel/traverse default export');
+      }
+
+      this.instances.set(key, traverse);
       this.loadPromises.delete(key);
       return this.instances.get(key);
     } catch (error) {

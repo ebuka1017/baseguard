@@ -1,7 +1,6 @@
 import type { DetectedFeature } from '../types/index.js';
 import { Parser } from './parser.js';
 import { FeatureValidator } from './feature-validator.js';
-import { LazyLoader } from '../core/lazy-loader.js';
 import { MemoryManager } from '../core/memory-manager.js';
 import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
@@ -78,7 +77,7 @@ export class ParserManager {
     const allFeatures: DetectedFeature[] = [];
     
     // Filter out unsupported files
-    const supportedFiles = filePaths.filter(filePath => this.canParseFile(filePath));
+    const supportedFiles = await this.filterSupportedFiles(filePaths);
     
     if (supportedFiles.length === 0) {
       return [];

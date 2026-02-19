@@ -8,7 +8,6 @@ import { ErrorHandler } from '../core/error-handler.js';
 import { logger } from '../core/debug-logger.js';
 import { glob } from 'glob';
 import chalk from 'chalk';
-import type { Violation } from '../types/index.js';
 
 /**
  * Check for compatibility violations with enhanced error recovery
@@ -21,7 +20,7 @@ export async function check(options: {
   offline?: boolean;
 }): Promise<void> {
   const categoryLogger = logger.createCategoryLogger('check-command');
-  const sessionId = logger.startSession('check-command');
+  logger.startSession('check-command');
   
   try {
     // Enable debug logging if requested

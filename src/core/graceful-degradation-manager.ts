@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { promises as fs } from 'fs';
+import { createHash } from 'crypto';
 import path from 'path';
 import type { Violation, Analysis, Fix } from '../types/index.js';
 import { ErrorType } from './error-handler.js';
@@ -451,7 +452,6 @@ export class GracefulDegradationManager {
    * Generate cache key for violation
    */
   private static generateCacheKey(violation: Violation): string {
-    const { createHash } = require('crypto');
     const keyData = `${violation.feature}:${violation.browser}:${violation.required}:${violation.baselineStatus}`;
     return createHash('md5').update(keyData).digest('hex');
   }

@@ -16,7 +16,7 @@ interface CacheEntry {
  */
 export class GeminiAnalyzer {
   private apiKey: string;
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
   private cache = new Map<string, CacheEntry>();
   private readonly cacheTtl = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -129,12 +129,7 @@ export class GeminiAnalyzer {
           parts: [{ text: prompt }]
         }],
         tools: [{
-          googleSearchRetrieval: {
-            dynamicRetrievalConfig: {
-              mode: 'MODE_DYNAMIC',
-              dynamicThreshold: 0.7
-            }
-          }
+          google_search: {}
         }],
         generationConfig: {
           temperature: 0.1,
@@ -340,7 +335,6 @@ Format your response with clear sections and cite your sources.
    */
   private extractBestPractices(content: string): string[] {
     const practices: string[] = [];
-    const lowerContent = content.toLowerCase();
     
     // Look for specific best practices mentioned in the response
     const practicePatterns = [

@@ -282,11 +282,12 @@ async function updateConfiguration(): Promise<void> {
         await ConfigurationManager.updateWithCustomTargets(value as any);
         config = await ConfigurationManager.load(); // Reload after update
         break;
-      case 'apiKeys':
+      case 'apiKeys': {
         const apiKeys = value as any;
         if (apiKeys.julesApiKey) config.apiKeys.jules = apiKeys.julesApiKey;
         if (apiKeys.geminiApiKey) config.apiKeys.gemini = apiKeys.geminiApiKey;
         break;
+      }
       case 'automation':
         config.automation = { ...config.automation, ...(value as any) };
         break;

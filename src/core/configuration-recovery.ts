@@ -1,8 +1,8 @@
 import { promises as fs } from 'fs';
+import { createHash } from 'crypto';
 import path from 'path';
 import chalk from 'chalk';
 import { ConfigurationManager } from './configuration.js';
-import { SystemErrorHandler } from './system-error-handler.js';
 import { logger } from './debug-logger.js';
 import { UIComponents } from '../ui/components.js';
 import type { Configuration } from '../types/index.js';
@@ -490,7 +490,6 @@ export class ConfigurationRecovery {
    * Calculate configuration checksum for integrity verification
    */
   private static calculateChecksum(config: Configuration): string {
-    const { createHash } = require('crypto');
     const configString = JSON.stringify(config, Object.keys(config).sort());
     return createHash('sha256').update(configString).digest('hex');
   }

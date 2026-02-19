@@ -24,7 +24,7 @@ export class ApiKeyManager {
     }
 
     // Basic format validation - Jules keys might have specific patterns
-    if (!/^[A-Za-z0-9_\-\.]+$/.test(trimmed)) {
+    if (!/^[A-Za-z0-9_.-]+$/.test(trimmed)) {
       return { valid: false, error: 'API key contains invalid characters' };
     }
 
@@ -55,7 +55,7 @@ export class ApiKeyManager {
     }
 
     // Basic format validation
-    if (!/^[A-Za-z0-9_\-]+$/.test(trimmed)) {
+    if (!/^[A-Za-z0-9_-]+$/.test(trimmed)) {
       return { valid: false, error: 'API key contains invalid characters' };
     }
 

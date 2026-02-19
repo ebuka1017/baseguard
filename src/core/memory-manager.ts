@@ -1,11 +1,6 @@
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 
-// Use Node.js built-in gc type
-declare global {
-  var gc: NodeJS.GCFunction | undefined;
-}
-
 /**
  * Memory-efficient file processing and streaming
  */

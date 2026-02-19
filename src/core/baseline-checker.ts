@@ -324,7 +324,7 @@ export class BaselineChecker {
     }
 
     // Check if the feature exists directly in web-features
-    if (this.webFeatures[feature]) {
+    if (this.webFeatures?.[feature] || this.webFeatures?.features?.[feature]) {
       return feature;
     }
 
@@ -445,6 +445,7 @@ export class BaselineChecker {
    * Check compatibility of a detected feature against browser targets
    */
   async checkCompatibility(detectedFeature: DetectedFeature, targets: BrowserTarget[]): Promise<CompatibilityResult> {
+    await this.ensureInitialized();
     const featureId = this.mapFeatureToId(detectedFeature.feature);
 
     if (!featureId) {

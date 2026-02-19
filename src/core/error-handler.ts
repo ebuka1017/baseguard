@@ -205,7 +205,7 @@ export class ErrorHandler {
           }
         );
 
-      case 429:
+      case 429: {
         const retryAfter = this.parseRetryAfter(error.response.headers);
         const quotaReset = this.parseQuotaReset(error.response.headers);
         
@@ -224,6 +224,7 @@ export class ErrorHandler {
             context
           }
         );
+      }
 
       case 400:
         return new APIError(

@@ -86,6 +86,7 @@ export class DebugLogger {
       this.flushInterval = setInterval(() => {
         this.flushLogs();
       }, 5000); // Flush every 5 seconds
+      this.flushInterval.unref();
 
       // Handle process exit
       process.on('exit', () => this.cleanup());
@@ -316,7 +317,6 @@ export class DebugLogger {
    * Output log entry to console
    */
   private outputToConsole(entry: LogEntry): void {
-    const timestamp = entry.timestamp.toISOString();
     const levelName = LogLevel[entry.level];
     
     let color = chalk.white;

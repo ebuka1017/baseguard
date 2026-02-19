@@ -1,6 +1,5 @@
 import { Parser } from './parser.js';
 import type { DetectedFeature } from '../types/index.js';
-import { LazyLoader } from '../core/lazy-loader.js';
 import { parse as parseBabel } from '@babel/parser';
 import traverse from '@babel/traverse';
 import * as t from '@babel/types';

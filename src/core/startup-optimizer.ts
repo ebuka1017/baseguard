@@ -40,8 +40,6 @@ export class StartupOptimizer {
    * Preload critical dependencies without blocking
    */
   private static async preloadCriticalDependencies(): Promise<void> {
-    const { LazyLoader } = await import('./lazy-loader.js');
-    
     // Start loading critical dependencies in parallel
     const criticalLoads = [
       LazyLoader.getWebFeatures().catch(() => {}),
@@ -60,13 +58,13 @@ export class StartupOptimizer {
     if (global.gc) {
       // Set up periodic GC for long-running processes
       this.gcInterval = setInterval(() => {
-        const { MemoryManager } = require('./memory-manager.js');
         const memCheck = MemoryManager.checkMemoryUsage();
         
         if (memCheck.warning) {
           MemoryManager.tryGarbageCollect();
         }
       }, 30000); // Check every 30 seconds
+      this.gcInterval.unref();
     }
 
     // Setup process memory monitoring
@@ -98,8 +96,6 @@ export class StartupOptimizer {
    * Optimize for specific use cases
    */
   static async optimizeForUseCase(useCase: 'check' | 'fix' | 'init'): Promise<void> {
-    const { LazyLoader } = await import('./lazy-loader.js');
-
     switch (useCase) {
       case 'check':
         // Preload parsing and baseline checking dependencies
@@ -123,9 +119,6 @@ export class StartupOptimizer {
    * Clean up resources and optimize memory
    */
   static cleanup(): void {
-    const { LazyLoader } = require('./lazy-loader.js');
-    const { MemoryManager } = require('./memory-manager.js');
-
     // Clear intervals
     if (this.gcInterval) {
       clearInterval(this.gcInterval);
@@ -204,6 +197,7 @@ export class StartupOptimizer {
           global.gc();
         }
       }, 30000);
+      this.memoryInterval.unref();
     }
   }
 
@@ -219,9 +213,6 @@ export class StartupOptimizer {
         LazyLoader.preloadCommon();
         
         // Initialize caches
-        const { CacheManager } = await import('./cache-manager.js');
-        // Cache initialization would happen here
-        
         // Cleanup old logs
         const { logger } = await import('./debug-logger.js');
         logger.cleanupOldLogs().catch(() => {});
@@ -236,8 +227,6 @@ export class StartupOptimizer {
    */
   static async optimizeStartup(): Promise<void> {
     // Start loading critical dependencies in background
-    const { LazyLoader } = await import('./lazy-loader.js');
-    
     const criticalLoads = [
       LazyLoader.getWebFeatures().catch(() => {}),
       LazyLoader.getBabelParser().catch(() => {})
@@ -253,3 +242,5 @@ export class StartupOptimizer {
     this.deferNonCriticalOperations();
   }
 }
+import { LazyLoader } from './lazy-loader.js';
+import { MemoryManager } from './memory-manager.js';

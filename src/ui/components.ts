@@ -57,7 +57,7 @@ export class UIComponents {
   /**
    * Display a single violation with context and details
    */
-  static showSingleViolation(violation: Violation, index: number): void {
+  static showSingleViolation(violation: Violation, _index: number): void {
     const lineInfo = `${Colors.muted('Line')} ${Colors.highlight(violation.line.toString())}`;
     const featureInfo = `${Colors.feature(violation.feature)}`;
     const browserInfo = `${Colors.browser(violation.browser)} ${violation.required}`;

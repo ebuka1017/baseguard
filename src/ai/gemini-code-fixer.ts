@@ -2,7 +2,6 @@ import type { Violation, Analysis, Fix } from '../types/index.js';
 import { promises as fs } from 'fs';
 import { ErrorHandler, APIError, ErrorType } from '../core/error-handler.js';
 import { logger } from '../core/debug-logger.js';
-import chalk from 'chalk';
 
 /**
  * Gemini 2.5 Pro code fixer for local files and repositories
@@ -341,7 +340,7 @@ Focus on creating a production-ready fix that maintains compatibility across all
   /**
    * Generate preview from diff content
    */
-  private generatePreviewFromDiff(diffContent: string, originalContent: string): string {
+  private generatePreviewFromDiff(diffContent: string, _originalContent: string): string {
     if (!diffContent) {
       return 'No preview available';
     }

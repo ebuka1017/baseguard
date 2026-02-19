@@ -1,4 +1,4 @@
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync, readFileSync } from 'fs';
 import { join } from 'path';
 import chalk from 'chalk';

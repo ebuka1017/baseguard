@@ -117,13 +117,13 @@ export class JulesImplementer {
       const lastActivity = activities[activities.length - 1];
       
       // Check if session is complete
-      if (lastActivity?.status === 'completed' || lastActivity?.type === 'agent_finished') {
+      if (lastActivity && this.isCompletionActivity(lastActivity)) {
         return activities;
       }
       
       // Check for failure states
-      if (lastActivity?.status === 'failed' || lastActivity?.status === 'error') {
-        throw new Error(`Jules session failed: ${lastActivity.status}`);
+      if (lastActivity && this.isFailureActivity(lastActivity)) {
+        throw new Error(`Jules session failed: ${JSON.stringify(lastActivity)}`);
       }
       
       // Wait 10 seconds before checking again
@@ -132,6 +132,24 @@ export class JulesImplementer {
     }
     
     throw new Error('Jules session timed out after 5 minutes');
+  }
+
+  private isCompletionActivity(activity: any): boolean {
+    return (
+      activity?.type === 'sessionCompleted' ||
+      activity?.type === 'agent_finished' ||
+      activity?.status === 'completed' ||
+      Boolean(activity?.sessionCompleted)
+    );
+  }
+
+  private isFailureActivity(activity: any): boolean {
+    return (
+      activity?.type === 'sessionFailed' ||
+      activity?.status === 'failed' ||
+      activity?.status === 'error' ||
+      Boolean(activity?.sessionFailed)
+    );
   }
 
   /**
@@ -187,22 +205,44 @@ export class JulesImplementer {
 
     const sessionData = await sessionResponse.json();
     
-    // Extract code changes from activities or session data
+    // Prefer official Jules patch artifact when available
+    const patch = this.extractPatchFromActivities(activities, sessionData);
     const codeChanges = this.extractCodeChanges(activities, sessionData);
-    
-    // Generate unified diff patch
-    const patch = this.generateUnifiedDiff(violation.file, codeChanges);
+    const finalPatch = patch || this.generateUnifiedDiff(violation.file, codeChanges);
     
     return {
       violation,
       analysis,
-      patch,
+      patch: finalPatch,
       explanation: this.generateFixExplanation(violation, analysis, codeChanges),
       filePath: violation.file,
-      preview: this.generatePreview(codeChanges),
+      preview: this.generatePreview(codeChanges, finalPatch),
       confidence: 0.8, // Jules confidence score
       testable: true
     };
+  }
+
+  private extractPatchFromActivities(activities: JulesActivity[], sessionData: any): string {
+    const activityPatch = activities
+      .map((activity: any) =>
+        activity?.changeSet?.gitPatch?.unidiffPatch ||
+        activity?.changeSet?.gitPatch?.patch ||
+        activity?.gitPatch?.unidiffPatch ||
+        activity?.gitPatch?.patch
+      )
+      .find((patch: string | undefined) => typeof patch === 'string' && patch.length > 0);
+
+    if (activityPatch) {
+      return activityPatch;
+    }
+
+    return (
+      sessionData?.changeSet?.gitPatch?.unidiffPatch ||
+      sessionData?.changeSet?.gitPatch?.patch ||
+      sessionData?.latestChangeSet?.gitPatch?.unidiffPatch ||
+      sessionData?.latestChangeSet?.gitPatch?.patch ||
+      ''
+    );
   }
 
   /**
@@ -260,7 +300,7 @@ export class JulesImplementer {
   /**
    * Generate fix explanation
    */
-  private generateFixExplanation(violation: Violation, analysis: Analysis, changes: { original: string; modified: string }): string {
+  private generateFixExplanation(violation: Violation, analysis: Analysis, _changes: { original: string; modified: string }): string {
     return `Fixed ${violation.feature} compatibility issue in ${violation.file}:\n\n` +
            `- Added progressive enhancement using ${analysis.fixStrategy}\n` +
            `- Implemented fallback for ${violation.browser} ${violation.required}\n` +
@@ -271,7 +311,11 @@ export class JulesImplementer {
   /**
    * Generate human-readable preview
    */
-  private generatePreview(changes: { original: string; modified: string }): string {
+  private generatePreview(changes: { original: string; modified: string }, patch: string): string {
+    if (patch) {
+      return patch.split('\n').slice(0, 40).join('\n');
+    }
+
     const originalLines = changes.original.split('\n');
     const modifiedLines = changes.modified.split('\n');
     

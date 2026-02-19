@@ -1,7 +1,7 @@
 import type { Violation, Analysis, Fix, Configuration } from '../types/index.js';
 import { JulesImplementer } from './jules-implementer.js';
 import { GeminiCodeFixer } from './gemini-code-fixer.js';
-import { ErrorHandler, APIError, ErrorType } from '../core/error-handler.js';
+import { APIError, ErrorType } from '../core/error-handler.js';
 import { logger } from '../core/debug-logger.js';
 import chalk from 'chalk';
 

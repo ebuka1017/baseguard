@@ -8,7 +8,6 @@ import { SystemErrorHandler } from './system-error-handler.js';
 import { GracefulDegradationManager } from './graceful-degradation-manager.js';
 import { ConfigurationRecovery } from './configuration-recovery.js';
 import { logger } from './debug-logger.js';
-import { ErrorHandler, APIError } from './error-handler.js';
 import chalk from 'chalk';
 
 /**
@@ -23,15 +22,11 @@ export class BaseGuard {
   private cacheManager!: CacheManager;
   private categoryLogger: ReturnType<typeof logger.createCategoryLogger>;
   private initialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(config: Configuration) {
     this.config = config;
     this.categoryLogger = logger.createCategoryLogger('baseguard');
-    
-    // Initialize with error handling (async initialization)
-    this.initializeComponents().catch(error => {
-      this.categoryLogger.error('Failed to initialize BaseGuard', { error });
-    });
   }
 
   /**
@@ -111,7 +106,13 @@ export class BaseGuard {
    */
   private async ensureInitialized(): Promise<void> {
     if (!this.initialized) {
-      await this.initializeComponents();
+      if (!this.initializationPromise) {
+        this.initializationPromise = this.initializeComponents().catch(error => {
+          this.initializationPromise = null;
+          throw error;
+        });
+      }
+      await this.initializationPromise;
     }
   }
 
@@ -121,7 +122,7 @@ export class BaseGuard {
   async checkViolations(patterns: string[] = []): Promise<Violation[]> {
     await this.ensureInitialized();
     
-    const sessionId = logger.startSession('check-violations');
+    logger.startSession('check-violations');
     this.categoryLogger.startPerformance('check-violations');
     
     try {
@@ -287,7 +288,7 @@ export class BaseGuard {
   /**
    * Extract basic features without complex parsing
    */
-  private async extractBasicFeatures(file: string): Promise<any[]> {
+  private async extractBasicFeatures(_file: string): Promise<any[]> {
     // This is a simplified feature extraction for fallback mode
     // In a real implementation, this would do basic text pattern matching
     return [];
@@ -452,7 +453,7 @@ export class BaseGuard {
   async analyzeViolations(violations: Violation[]): Promise<Analysis[]> {
     await this.ensureInitialized();
     
-    const sessionId = logger.startSession('analyze-violations');
+    logger.startSession('analyze-violations');
     this.categoryLogger.startPerformance('analyze-violations');
     
     try {
@@ -522,7 +523,7 @@ export class BaseGuard {
   async generateFixes(violations: Violation[], analyses: Analysis[]): Promise<Fix[]> {
     await this.ensureInitialized();
     
-    const sessionId = logger.startSession('generate-fixes');
+    logger.startSession('generate-fixes');
     this.categoryLogger.startPerformance('generate-fixes');
     
     try {
@@ -586,7 +587,7 @@ export class BaseGuard {
   async applyFixes(fixes: Fix[]): Promise<void> {
     await this.ensureInitialized();
     
-    const sessionId = logger.startSession('apply-fixes');
+    logger.startSession('apply-fixes');
     this.categoryLogger.startPerformance('apply-fixes');
     
     try {

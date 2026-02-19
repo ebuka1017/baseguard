@@ -5,6 +5,7 @@ import { ConfigurationManager } from '../core/configuration.js';
 import { ErrorHandler } from '../core/error-handler.js';
 import { UnifiedCodeFixer } from '../ai/unified-code-fixer.js';
 import { GeminiAnalyzer } from '../ai/gemini-analyzer.js';
+import { FixManager } from '../ai/fix-manager.js';
 import { glob } from 'glob';
 
 /**
@@ -21,21 +22,11 @@ export async function fix(options: {
     // Load configuration
     const config = await ConfigurationManager.load();
     
-    // Check API keys
-    if (!config.apiKeys.jules) {
-      UIComponents.showErrorBox('Jules API key not configured. Run "base init" to set up API keys.');
-      process.exit(1);
-    }
-    
-    if (!config.apiKeys.gemini) {
-      UIComponents.showErrorBox('Gemini API key not configured. Run "base init" to set up API keys.');
-      process.exit(1);
-    }
-    
     // Initialize services
     const baseGuard = new BaseGuard(config);
     const unifiedCodeFixer = new UnifiedCodeFixer(config);
-    const geminiAnalyzer = new GeminiAnalyzer(config.apiKeys.gemini);
+    const fixManager = new FixManager();
+    const geminiAnalyzer = config.apiKeys.gemini ? new GeminiAnalyzer(config.apiKeys.gemini) : null;
     
     // Show agent status and recommendations
     console.log(chalk.cyan('🤖 Coding Agent Status:'));
@@ -47,7 +38,7 @@ export async function fix(options: {
     console.log(`   Primary: ${agentStatus.primary} ${primaryAvailable ? '✅' : '❌'}`);
     console.log(`   Fallback: ${agentStatus.fallback} ${fallbackAvailable ? '✅' : '❌'}`);
     
-    if (!primaryAvailable && !fallbackAvailable) {
+    if (!agentStatus.jules.configured && !agentStatus.gemini.configured) {
       console.log(chalk.red('\n❌ No coding agents are available'));
       console.log(chalk.cyan('💡 Configure API keys to enable code fixing:'));
       console.log(chalk.cyan('   • Run "base config set-keys" to configure API keys'));
@@ -91,8 +82,14 @@ export async function fix(options: {
     UIComponents.showViolations(violations);
     
     // Step 2: Analyze violations with Gemini
-    console.log(chalk.cyan('\n🧠 Analyzing violations with AI...'));
-    const analyses = await geminiAnalyzer.analyzeViolations(violations);
+    let analyses;
+    if (geminiAnalyzer) {
+      console.log(chalk.cyan('\n🧠 Analyzing violations with AI...'));
+      analyses = await geminiAnalyzer.analyzeViolations(violations);
+    } else {
+      console.log(chalk.yellow('\n⚠️ Gemini API key not configured, using fallback analysis...'));
+      analyses = await baseGuard.analyzeViolations(violations);
+    }
     
     // If analyze-only mode, show analysis and exit
     if (options.analyzeOnly) {
@@ -171,8 +168,39 @@ export async function fix(options: {
       });
     }
     
+    // Step 4: Apply fixes
+    let appliedCount = 0;
+    let skippedCount = 0;
+    let applyFailedCount = 0;
+    
+    if (options.auto) {
+      console.log(chalk.cyan('\n⚡ Applying fixes automatically...'));
+      for (const fix of fixes) {
+        try {
+          await fixManager.applyFix(fix);
+          appliedCount++;
+        } catch (error) {
+          applyFailedCount++;
+          console.log(chalk.red(`❌ Failed to apply fix for ${fix.filePath}: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+      }
+    } else {
+      console.log(chalk.cyan('\n🧩 Review and apply fixes:'));
+      const results = await fixManager.applyFixes(fixes);
+      appliedCount = results.applied.length;
+      skippedCount = results.skipped.length;
+      applyFailedCount = results.failed.length;
+    }
+    
     // Show summary
     console.log(chalk.cyan(`\n📈 Summary: ${successCount}/${violations.length} fixes generated successfully`));
+    console.log(chalk.green(`✅ Applied fixes: ${appliedCount}`));
+    if (skippedCount > 0) {
+      console.log(chalk.yellow(`⏭️ Skipped fixes: ${skippedCount}`));
+    }
+    if (applyFailedCount > 0) {
+      console.log(chalk.red(`❌ Failed to apply: ${applyFailedCount}`));
+    }
     
     if (failedCount > 0) {
       console.log(chalk.yellow(`\n⚠️ ${failedCount} fixes failed to generate. This may be due to:`));
@@ -183,8 +211,6 @@ export async function fix(options: {
     
     // Show next steps
     console.log(chalk.cyan('\n💡 Next Steps:'));
-    console.log(chalk.cyan('   • Review the generated fixes above'));
-    console.log(chalk.cyan('   • Apply fixes manually to your code'));
     console.log(chalk.cyan('   • Test your application after applying fixes'));
     console.log(chalk.cyan('   • Run "base check" to verify fixes resolve violations'));
     
