@@ -345,12 +345,14 @@ export class BaselineChecker {
 
     // If it's a version string, compare versions
     if (typeof browserSupport === 'string') {
-      return this.compareVersions(browserSupport, minVersion) >= 0;
+      // browserSupport represents the first supporting version.
+      // A target is compatible only when support starts at or before the target version.
+      return this.compareVersions(browserSupport, minVersion) <= 0;
     }
 
     // If it's an object with version info, extract the version
     if (typeof browserSupport === 'object' && browserSupport.version) {
-      return this.compareVersions(browserSupport.version, minVersion) >= 0;
+      return this.compareVersions(browserSupport.version, minVersion) <= 0;
     }
 
     return false;
@@ -473,9 +475,9 @@ export class BaselineChecker {
         // Check baseline status
         const baselineStatus = featureData.status?.baseline;
 
-        if (baselineStatus === false) {
+        if (target.minVersion === 'baseline' && baselineStatus !== 'high') {
           violations.push(this.createViolation(detectedFeature, target, featureData, featureId));
-        } else if (target.minVersion === 'baseline-newly' && baselineStatus === 'low') {
+        } else if (target.minVersion === 'baseline-newly' && baselineStatus === false) {
           violations.push(this.createViolation(detectedFeature, target, featureData, featureId));
         }
       } else {

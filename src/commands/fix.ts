@@ -38,13 +38,18 @@ export async function fix(options: {
     console.log(`   Primary: ${agentStatus.primary} ${primaryAvailable ? '✅' : '❌'}`);
     console.log(`   Fallback: ${agentStatus.fallback} ${fallbackAvailable ? '✅' : '❌'}`);
     
-    if (!agentStatus.jules.configured && !agentStatus.gemini.configured) {
+    const noAgentsConfigured = !agentStatus.jules.configured && !agentStatus.gemini.configured;
+    if (noAgentsConfigured && !options.analyzeOnly) {
       console.log(chalk.red('\n❌ No coding agents are available'));
       console.log(chalk.cyan('💡 Configure API keys to enable code fixing:'));
       console.log(chalk.cyan('   • Run "base config set-keys" to configure API keys'));
       console.log(chalk.cyan('   • Get Gemini API key: https://aistudio.google.com'));
       console.log(chalk.cyan('   • Get Jules API key: https://jules.google.com/settings#api'));
       process.exit(1);
+    }
+
+    if (noAgentsConfigured && options.analyzeOnly) {
+      console.log(chalk.yellow('\n⚠️ No AI coding agents configured, running fallback analysis only.'));
     }
     
     // Show agent-specific information
