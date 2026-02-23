@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BaseGuard Knowledge</title>
+  <meta name="description" content="BaseGuard documentation, deployment notes, and release history.">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">BaseGuard</p>
+      <h1>Knowledge Portal</h1>
+      <p class="lede">
+        Documentation and release notes hosted directly from the repository.
+        No separate website codebase.
+      </p>
+      <div class="hero-actions">
+        <a class="btn primary" href="https://github.com/ebuka1017/baseguard" target="_blank" rel="noreferrer">Open Repo</a>
+        <a class="btn" href="https://www.npmjs.com/package/baseguard" target="_blank" rel="noreferrer">npm Package</a>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Docs</h2>
+        <input id="search" type="search" placeholder="Filter docs..." aria-label="Filter docs">
+      </div>
+      <div id="docs-grid" class="docs-grid"></div>
+    </section>
+
+    <section class="panel split">
+      <div>
+        <h2>How It Works</h2>
+        <p>
+          GitHub Pages deploys this <code>docs/</code> folder. A workflow copies key Markdown files from repo root
+          into <code>docs/knowledge/</code> on each push to <code>main</code>.
+        </p>
+      </div>
+      <div>
+        <h2>Pages Setup</h2>
+        <ol>
+          <li>Open repository settings.</li>
+          <li>Go to <code>Settings → Pages</code>.</li>
+          <li>Set source to <code>GitHub Actions</code>.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

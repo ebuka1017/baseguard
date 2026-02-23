@@ -1,0 +1,52 @@
+name: Deploy Docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+      - "*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare docs bundle
+        run: |
+          mkdir -p docs/knowledge
+          cp README.md docs/knowledge/README.md
+          cp QUICK_START.md docs/knowledge/QUICK_START.md
+          cp DEPLOYMENT.md docs/knowledge/DEPLOYMENT.md
+          cp DEPLOYMENT_CHECKLIST.md docs/knowledge/DEPLOYMENT_CHECKLIST.md
+          cp CHANGELOG.md docs/knowledge/CHANGELOG.md
+          cp RELEASE_NOTES_v1.0.2.md docs/knowledge/RELEASE_NOTES_v1.0.2.md
+          cp DEPLOYMENT_SUMMARY_v1.0.2.md docs/knowledge/DEPLOYMENT_SUMMARY_v1.0.2.md
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
