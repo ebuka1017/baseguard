@@ -1,0 +1,17 @@
+node_modules/
+src/
+tests/
+coverage/
+.git/
+.github/
+.husky/
+.vscode/
+.idea/
+tmp/
+temp/
+tmp-smoke/
+tmp-live-ai/
+*.log
+.baseguard/
+.baseguard-errors.log
+*.tsbuildinfo

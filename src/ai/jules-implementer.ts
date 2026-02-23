@@ -13,6 +13,7 @@ export class JulesImplementer {
   private baseUrl = 'https://jules.googleapis.com/v1alpha';
   private githubManager: GitHubManager;
   private fixManager: FixManager;
+  private cachedResolvedSourceName: string | null = null;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -32,7 +33,7 @@ export class JulesImplementer {
 
     try {
       // Get repository source if not provided
-      const source = repoSource || await this.githubManager.getCurrentSourceIdentifier();
+      const source = repoSource || await this.getCurrentSourceIdentifier();
       
       // Create a session for this specific fix with retry logic
       const session = await ErrorHandler.withRetry(
@@ -80,7 +81,7 @@ export class JulesImplementer {
       body: JSON.stringify({
         prompt: prompt,
         sourceContext: {
-          source: source, // e.g., "sources/github/user/repo"
+          source: source, // Official Jules source name from GET /v1alpha/sources
           githubRepoContext: {
             startingBranch: "main"
           }
@@ -100,9 +101,15 @@ export class JulesImplementer {
     const sessionData = await response.json();
     
     // Validate session response
+    if (!sessionData?.id && typeof sessionData?.name === 'string') {
+      const idFromName = sessionData.name.split('/').pop();
+      if (idFromName) {
+        sessionData.id = idFromName;
+      }
+    }
     ErrorHandler.validateAPIResponse(sessionData, ['id']);
-    
-    return sessionData;
+
+    return sessionData as JulesSession;
   }
 
   /**
@@ -110,19 +117,21 @@ export class JulesImplementer {
    */
   private async waitForCompletion(sessionId: string): Promise<JulesActivity[]> {
     let attempts = 0;
-    const maxAttempts = 30; // 5 minutes max (10 seconds * 30)
+    const parsedAttempts = parseInt(process.env.BASEGUARD_JULES_MAX_ATTEMPTS || '36', 10);
+    const maxAttempts = Number.isFinite(parsedAttempts) && parsedAttempts > 0 ? parsedAttempts : 36;
     
     while (attempts < maxAttempts) {
       const activities = await this.getActivities(sessionId);
       const lastActivity = activities[activities.length - 1];
+      const sessionState = await this.getSessionState(sessionId);
       
       // Check if session is complete
-      if (lastActivity && this.isCompletionActivity(lastActivity)) {
+      if ((lastActivity && this.isCompletionActivity(lastActivity)) || sessionState === 'COMPLETED') {
         return activities;
       }
       
       // Check for failure states
-      if (lastActivity && this.isFailureActivity(lastActivity)) {
+      if ((lastActivity && this.isFailureActivity(lastActivity)) || sessionState === 'FAILED' || sessionState === 'CANCELLED') {
         throw new Error(`Jules session failed: ${JSON.stringify(lastActivity)}`);
       }
       
@@ -131,7 +140,7 @@ export class JulesImplementer {
       attempts++;
     }
     
-    throw new Error('Jules session timed out after 5 minutes');
+    throw new Error(`Jules session timed out after ${Math.round((maxAttempts * 10) / 6) / 10} minutes`);
   }
 
   private isCompletionActivity(activity: any): boolean {
@@ -139,6 +148,7 @@ export class JulesImplementer {
       activity?.type === 'sessionCompleted' ||
       activity?.type === 'agent_finished' ||
       activity?.status === 'completed' ||
+      activity?.state === 'COMPLETED' ||
       Boolean(activity?.sessionCompleted)
     );
   }
@@ -148,8 +158,29 @@ export class JulesImplementer {
       activity?.type === 'sessionFailed' ||
       activity?.status === 'failed' ||
       activity?.status === 'error' ||
+      activity?.state === 'FAILED' ||
       Boolean(activity?.sessionFailed)
     );
+  }
+
+  private async getSessionState(sessionId: string): Promise<string | null> {
+    const response = await fetch(`${this.baseUrl}/sessions/${sessionId}`, {
+      headers: {
+        'X-Goog-Api-Key': this.apiKey
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      const error = new Error(`Failed to get session state: ${response.status} ${response.statusText}`);
+      (error as any).response = response;
+      throw error;
+    }
+
+    const data = await response.json() as any;
+    return typeof data?.state === 'string' ? data.state : null;
   }
 
   /**
@@ -163,6 +194,10 @@ export class JulesImplementer {
     });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        // Jules can return 404 briefly before activities are materialized.
+        return [];
+      }
       const error = new Error(`Failed to get activities: ${response.status} ${response.statusText}`);
       (error as any).response = response;
       throw error;
@@ -223,13 +258,24 @@ export class JulesImplementer {
   }
 
   private extractPatchFromActivities(activities: JulesActivity[], sessionData: any): string {
-    const activityPatch = activities
-      .map((activity: any) =>
-        activity?.changeSet?.gitPatch?.unidiffPatch ||
-        activity?.changeSet?.gitPatch?.patch ||
-        activity?.gitPatch?.unidiffPatch ||
-        activity?.gitPatch?.patch
-      )
+    const activityPatch = [...activities]
+      .reverse()
+      .map((activity: any) => {
+        const artifactPatch = (Array.isArray(activity?.artifacts) ? activity.artifacts : [])
+          .map((artifact: any) =>
+            artifact?.changeSet?.gitPatch?.unidiffPatch ||
+            artifact?.changeSet?.gitPatch?.patch
+          )
+          .find((patch: string | undefined) => typeof patch === 'string' && patch.length > 0);
+
+        return (
+          artifactPatch ||
+          activity?.changeSet?.gitPatch?.unidiffPatch ||
+          activity?.changeSet?.gitPatch?.patch ||
+          activity?.gitPatch?.unidiffPatch ||
+          activity?.gitPatch?.patch
+        );
+      })
       .find((patch: string | undefined) => typeof patch === 'string' && patch.length > 0);
 
     if (activityPatch) {
@@ -372,15 +418,14 @@ Please fix this compatibility issue while maintaining the existing functionality
    */
   async testConnection(): Promise<{ success: boolean; error?: string; errorType?: ErrorType }> {
     try {
-      const response = await fetch(`${this.baseUrl}/sessions`, {
+      const response = await fetch(`${this.baseUrl}/sources?pageSize=1`, {
         method: 'GET',
         headers: {
           'X-Goog-Api-Key': this.apiKey
         }
       });
       
-      if (response.ok || response.status === 404) {
-        // 404 is acceptable for sessions endpoint when no sessions exist
+      if (response.ok) {
         return { success: true };
       } else {
         const error = new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -402,14 +447,19 @@ Please fix this compatibility issue while maintaining the existing functionality
    * Get repository source identifier (GitHub integration is handled on Jules dashboard)
    */
   async getRepositorySource(): Promise<string> {
-    return await this.githubManager.getSourceIdentifier();
+    return await this.getCurrentSourceIdentifier();
   }
 
   /**
    * Check if repository information is available (GitHub integration is handled on Jules dashboard)
    */
   async isRepositoryDetected(): Promise<boolean> {
-    return await this.githubManager.isJulesIntegrationSetup();
+    try {
+      const source = await this.resolveLinkedJulesSource();
+      return !!source;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -430,7 +480,75 @@ Please fix this compatibility issue while maintaining the existing functionality
    * Get current source identifier
    */
   async getSourceIdentifier(): Promise<string> {
-    return await this.githubManager.getCurrentSourceIdentifier();
+    return await this.getCurrentSourceIdentifier();
+  }
+
+  /**
+   * Resolve the current git repository to an actual Jules-linked source name.
+   * Jules source names are assigned by the API and must be discovered via /sources.
+   */
+  private async resolveLinkedJulesSource(): Promise<string | null> {
+    if (this.cachedResolvedSourceName) {
+      return this.cachedResolvedSourceName;
+    }
+
+    await this.githubManager.detectRepositoryInfo();
+    const repoInfo = this.githubManager.getRepositoryInfo();
+    const owner = repoInfo.owner?.toLowerCase();
+    const repo = repoInfo.name?.toLowerCase();
+
+    if (!owner || !repo) {
+      return null;
+    }
+
+    const response = await fetch(`${this.baseUrl}/sources?pageSize=100`, {
+      headers: {
+        'X-Goog-Api-Key': this.apiKey
+      }
+    });
+
+    if (!response.ok) {
+      const error = new Error(`Failed to list Jules sources: ${response.status} ${response.statusText}`);
+      (error as any).response = response;
+      throw error;
+    }
+
+    const data = await response.json() as any;
+    const sources = Array.isArray(data?.sources) ? data.sources : [];
+
+    const match = sources.find((source: any) => {
+      const sourceOwner = source?.githubRepo?.owner?.toLowerCase();
+      const sourceRepo = source?.githubRepo?.repo?.toLowerCase();
+      return sourceOwner === owner && sourceRepo === repo;
+    });
+
+    const sourceName = typeof match?.name === 'string' ? match.name : null;
+    if (sourceName) {
+      this.cachedResolvedSourceName = sourceName;
+    }
+
+    return sourceName;
+  }
+
+  private async getCurrentSourceIdentifier(): Promise<string> {
+    const linkedSource = await this.resolveLinkedJulesSource();
+    if (linkedSource) {
+      return linkedSource;
+    }
+
+    const repoInfo = this.githubManager.getRepositoryInfo();
+    const repoLabel = repoInfo.owner && repoInfo.name ? `${repoInfo.owner}/${repoInfo.name}` : 'current repository';
+    throw new APIError(
+      `Jules source is not linked for ${repoLabel}`,
+      ErrorType.CONFIGURATION,
+      {
+        suggestions: [
+          'Connect the repository in the Jules dashboard',
+          'Verify the same Google account/API key has access to the linked source',
+          'Run GET /v1alpha/sources and confirm the repository appears'
+        ]
+      }
+    );
   }
 
   /**

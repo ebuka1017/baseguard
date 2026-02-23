@@ -9,7 +9,7 @@ import { logger } from '../core/debug-logger.js';
  */
 export class GeminiCodeFixer {
   private apiKey: string;
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
+  private baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${process.env.BASEGUARD_GEMINI_FIX_MODEL || 'gemini-3-flash-preview'}:generateContent`;
   private categoryLogger: ReturnType<typeof logger.createCategoryLogger>;
 
   constructor(apiKey: string) {
@@ -119,12 +119,7 @@ export class GeminiCodeFixer {
           parts: [{ text: prompt }]
         }],
         tools: [{
-          googleSearchRetrieval: {
-            dynamicRetrievalConfig: {
-              mode: 'MODE_DYNAMIC',
-              dynamicThreshold: 0.7
-            }
-          }
+          google_search: {}
         }],
         generationConfig: {
           temperature: 0.1,

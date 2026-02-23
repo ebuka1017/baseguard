@@ -16,7 +16,7 @@ interface CacheEntry {
  */
 export class GeminiAnalyzer {
   private apiKey: string;
-  private baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  private baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${process.env.BASEGUARD_GEMINI_ANALYZER_MODEL || 'gemini-3-flash-preview'}:generateContent`;
   private cache = new Map<string, CacheEntry>();
   private readonly cacheTtl = 24 * 60 * 60 * 1000; // 24 hours
 
